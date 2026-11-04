@@ -1,0 +1,2472 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JKE Smart Lab Analytics</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg-primary: #07111f;
+    --bg-secondary: #0b1a2e;
+    --bg-card: #0f2340;
+    --bg-card-hover: #14305a;
+    --sidebar-width: 240px;
+    --accent-green: #00d4aa;
+    --accent-blue: #4fc3f7;
+    --accent-purple: #a78bfa;
+    --status-ok: #22c55e;
+    --status-broken: #ef4444;
+    --status-maintain: #f59e0b;
+    --status-inactive: #6b7280;
+    --status-new: #3b82f6;
+    --text-primary: #e2f0fb;
+    --text-muted: #7da5c4;
+    --border: #1a3a5c;
+    --border-accent: #00d4aa44;
+    --shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { font-size:14px; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    overflow-x: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: var(--sidebar-width);
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+    transition: transform 0.3s;
+  }
+  .sidebar-logo {
+    padding: 16px 16px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .sidebar-logo .logo-pkb-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 6px 8px;
+    background: #ffffff12;
+    border-radius: 8px;
+  }
+  .sidebar-logo .logo-pkb-wrap img {
+    max-width: 160px;
+    max-height: 56px;
+    width: 100%;
+    object-fit: contain;
+  }
+  .sidebar-logo h2 { font-size: 12px; font-weight: 700; color: var(--accent-green); line-height: 1.3; text-align: center; }
+  .sidebar-logo p { font-size: 10px; color: var(--text-muted); margin-top: 1px; text-align: center; }
+  /* Logo JKE dalam topbar */
+  .topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+  }
+  .topbar-brand img {
+    max-height: 36px;
+    max-width: 120px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .topbar-brand h1 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  @media (max-width: 600px) {
+    .topbar-brand img { max-height: 28px; max-width: 80px; }
+    .topbar-brand h1 { font-size: 13px; }
+  }
+  .sim-badge {
+    margin: 10px 16px 0;
+    background: #f59e0b22;
+    border: 1px solid #f59e0b55;
+    color: #f59e0b;
+    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    text-align: center;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  .nav-section { padding: 12px 10px 4px; font-size: 9px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 8px;
+    margin: 1px 6px;
+    font-size: 13px;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .nav-item:hover { background: var(--bg-card); color: var(--text-primary); }
+  .nav-item.active {
+    background: var(--bg-card);
+    color: var(--accent-green);
+    border-color: var(--border-accent);
+  }
+  .nav-item .fa-fw { font-size: 14px; width: 18px; }
+  .nav-badge {
+    margin-left: auto;
+    background: var(--status-broken);
+    color: white;
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 20px;
+    font-weight: 700;
+    min-width: 18px;
+    text-align: center;
+  }
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* ── MAIN ── */
+  #main {
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOPBAR ── */
+  #topbar {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 50;
+  }
+  #topbar h1 { font-size: 16px; font-weight: 700; color: var(--text-primary); flex: 1; min-width: 140px; }
+  .topbar-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .filter-select {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    outline: none;
+  }
+  .filter-select:focus { border-color: var(--accent-green); }
+  .btn-icon {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .btn-icon:hover { color: var(--accent-green); border-color: var(--accent-green); }
+  #alertDot {
+    position: absolute; top: 4px; right: 4px;
+    width: 8px; height: 8px;
+    background: var(--status-broken);
+    border-radius: 50%;
+    display: none;
+  }
+
+  /* ── CONTENT ── */
+  #content { padding: 20px 24px; flex: 1; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── KPI CARDS ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: border-color 0.2s;
+  }
+  .kpi-card:hover { border-color: var(--border-accent); }
+  .kpi-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .kpi-info { flex: 1; min-width: 0; }
+  .kpi-value { font-size: 26px; font-weight: 700; line-height: 1; }
+  .kpi-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .kpi-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── SECTION GRID ── */
+  .section-grid { display: grid; gap: 16px; margin-bottom: 20px; }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-1-2 { grid-template-columns: 1fr 2fr; }
+  .grid-2-1 { grid-template-columns: 2fr 1fr; }
+
+  /* ── PANEL ── */
+  .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-header h3 { font-size: 13px; font-weight: 600; flex: 1; }
+  .panel-header .panel-icon { color: var(--accent-green); font-size: 14px; }
+  .panel-body { padding: 16px 18px; }
+
+  /* ── HEALTH BARS ── */
+  .health-list { display: flex; flex-direction: column; gap: 10px; }
+  .health-item { }
+  .health-item-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 4px;
+  }
+  .health-lab-name { font-size: 12px; font-weight: 500; }
+  .health-score-val { font-size: 12px; font-weight: 700; }
+  .health-bar-track {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .health-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s ease;
+  }
+  .health-meta { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── CHART CANVAS ── */
+  .chart-wrap { position: relative; }
+  .chart-wrap canvas { max-height: 220px; }
+
+  /* ── INSIGHTS ── */
+  .insights-list { display: flex; flex-direction: column; gap: 10px; }
+  .insight-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .insight-item.critical { border-color: #ef444455; background: #ef444408; }
+  .insight-item.warning  { border-color: #f59e0b55; background: #f59e0b08; }
+  .insight-item.info     { border-color: #3b82f655; background: #3b82f608; }
+  .insight-item.good     { border-color: #22c55e55; background: #22c55e08; }
+  .insight-icon { font-size: 16px; margin-top: 1px; flex-shrink: 0; }
+  .insight-item.critical .insight-icon { color: #ef4444; }
+  .insight-item.warning  .insight-icon { color: #f59e0b; }
+  .insight-item.info     .insight-icon { color: #3b82f6; }
+  .insight-item.good     .insight-icon { color: #22c55e; }
+  .insight-text { font-size: 12px; line-height: 1.5; }
+  .insight-text strong { display: block; margin-bottom: 2px; font-size: 12px; }
+  .insight-text span { color: var(--text-muted); font-size: 11px; }
+
+  /* ── ALERTS ── */
+  .alert-list { display: flex; flex-direction: column; gap: 8px; }
+  .alert-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+    background: var(--bg-secondary);
+    font-size: 12px;
+  }
+  .alert-item.critical { border-color: var(--status-broken); }
+  .alert-item.warning  { border-color: var(--status-maintain); }
+  .alert-item.info     { border-color: var(--accent-blue); }
+  .alert-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 3px; flex-shrink: 0; }
+  .alert-item.critical .alert-dot { background: var(--status-broken); }
+  .alert-item.warning  .alert-dot { background: var(--status-maintain); }
+  .alert-item.info     .alert-dot { background: var(--accent-blue); }
+  .alert-msg { flex: 1; line-height: 1.4; }
+  .alert-time { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+  .alert-dismiss {
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 11px; padding: 0 4px;
+  }
+  .alert-dismiss:hover { color: var(--status-broken); }
+  .no-data { color: var(--text-muted); font-size: 12px; text-align: center; padding: 24px 0; }
+
+  /* ── STATUS BADGE ── */
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .status-badge::before { content:''; width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+  .s-ok       { background:#22c55e18; color:var(--status-ok);       border:1px solid #22c55e44; }
+  .s-ok::before      { background:var(--status-ok); }
+  .s-broken   { background:#ef444418; color:var(--status-broken);   border:1px solid #ef444444; }
+  .s-broken::before  { background:var(--status-broken); }
+  .s-maintain { background:#f59e0b18; color:var(--status-maintain); border:1px solid #f59e0b44; }
+  .s-maintain::before{ background:var(--status-maintain); }
+  .s-inactive { background:#6b728018; color:var(--status-inactive); border:1px solid #6b728044; }
+  .s-inactive::before{ background:var(--status-inactive); }
+  .s-new      { background:#3b82f618; color:var(--status-new);      border:1px solid #3b82f644; }
+  .s-new::before     { background:var(--status-new); }
+
+  /* ── TABLE ── */
+  .table-toolbar {
+    padding: 14px 18px;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  .search-input {
+    flex: 1; min-width: 160px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    outline: none;
+  }
+  .search-input:focus { border-color: var(--accent-green); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--accent-green);
+    color: #07111f;
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: #00f0c0; }
+  .btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border-color: var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent-green); color: var(--accent-green); }
+  .btn-danger {
+    background: #ef444422;
+    color: var(--status-broken);
+    border-color: #ef444444;
+  }
+  .btn-danger:hover { background: #ef444433; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    padding: 10px 14px;
+    text-align: left;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:hover { background: var(--bg-secondary); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td { padding: 10px 14px; vertical-align: middle; }
+  .td-asset { font-family: monospace; font-size: 11px; color: var(--accent-blue); }
+  .td-name { font-weight: 500; }
+  .td-actions { display: flex; gap: 6px; white-space: nowrap; }
+  .pagination {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .pagination-btns { display: flex; gap: 6px; }
+  .page-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+  }
+  .page-btn:hover, .page-btn.active { border-color: var(--accent-green); color: var(--accent-green); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    display: none;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    width: 100%; max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow);
+  }
+  .modal-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .modal-header h3 { font-size: 15px; font-weight: 600; flex: 1; }
+  .modal-close {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 18px; cursor: pointer; line-height: 1;
+  }
+  .modal-close:hover { color: var(--status-broken); }
+  .modal-body { padding: 20px; }
+  .modal-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 10px; justify-content: flex-end;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+  .form-group label { font-size: 11px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; }
+  .form-control {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    font-family: inherit;
+    width: 100%;
+  }
+  .form-control:focus { border-color: var(--accent-green); }
+  textarea.form-control { resize: vertical; min-height: 70px; }
+
+  /* ── MAINTENANCE VIEW ── */
+  .maint-list { display: flex; flex-direction: column; gap: 10px; }
+  .maint-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex; gap: 14px; align-items: flex-start;
+  }
+  .maint-date-box {
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 8px 12px;
+    text-align: center;
+    min-width: 56px;
+    flex-shrink: 0;
+  }
+  .maint-date-box .day { font-size: 20px; font-weight: 700; color: var(--accent-green); line-height: 1; }
+  .maint-date-box .mon { font-size: 10px; color: var(--text-muted); }
+  .maint-info { flex: 1; }
+  .maint-info h4 { font-size: 13px; font-weight: 600; }
+  .maint-info p  { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+  /* ── SCORE PILL ── */
+  .score-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+  }
+
+  /* ── SETTINGS VIEW ── */
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .setting-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .setting-card h4 { font-size: 13px; margin-bottom: 10px; color: var(--accent-green); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--accent-green);
+    color: var(--text-primary);
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    z-index: 2000;
+    display: none;
+    box-shadow: var(--shadow);
+    max-width: 320px;
+  }
+  #toast.show { display: flex; gap: 8px; align-items: center; animation: slideIn 0.3s ease; }
+  #toast.error { border-color: var(--status-broken); }
+  @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* ── CONFIRM DIALOG ── */
+  #confirmModal .modal { max-width: 380px; }
+  #confirmMsg { font-size: 13px; color: var(--text-muted); margin-top: 6px; line-height: 1.6; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg-primary); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent-green); }
+
+  /* ── HAMBURGER ── */
+  #menuToggle {
+    display: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px;
+  }
+  #sideOverlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 90;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+  }
+  .empty-state i { font-size: 40px; margin-bottom: 12px; display: block; opacity: 0.4; }
+  .empty-state p { font-size: 13px; }
+
+  /* ── SCORE COLOR HELPERS ── */
+  .score-ex  { color: #22c55e; }
+  .score-gd  { color: #4fc3f7; }
+  .score-md  { color: #f59e0b; }
+  .score-lw  { color: #fb923c; }
+  .score-cr  { color: #ef4444; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .kpi-grid { grid-template-columns: repeat(2,1fr); }
+    .grid-2, .grid-3, .grid-1-2, .grid-2-1 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #sideOverlay { display: block; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    #sideOverlay.open { opacity: 1; pointer-events: all; }
+    #main { margin-left: 0; }
+    #menuToggle { display: flex; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    #content { padding: 14px; }
+    .form-row { grid-template-columns: 1fr; }
+    .settings-grid { grid-template-columns: 1fr; }
+  }
+  @media print {
+    #sidebar, #main, #sideOverlay, #toast { display: none !important; }
+    .no-print { display: none !important; }
+    #printArea { display: block !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-pkb-wrap">
+      <img src="logo pkb.jpg" alt="Logo Politeknik Kota Bharu">
+    </div>
+    <h2>JKE Smart Lab Analytics</h2>
+    <p>Jabatan Kejuruteraan Elektrik</p>
+  </div>
+  <div class="sim-badge"><i class="fas fa-flask"></i> DATA SIMULASI</div>
+
+  <div class="nav-section">Utama</div>
+  <div class="nav-item active" onclick="showView('dashboard')">
+    <i class="fas fa-chart-pie fa-fw"></i> Papan Pemuka
+  </div>
+  <div class="nav-item" onclick="showView('equipment')">
+    <i class="fas fa-tools fa-fw"></i> Peralatan
+  </div>
+  <div class="nav-item" onclick="showView('maintenance')">
+    <i class="fas fa-wrench fa-fw"></i> Penyelenggaraan
+  </div>
+
+  <div class="nav-section">Analisis</div>
+  <div class="nav-item" onclick="showView('reports')">
+    <i class="fas fa-chart-bar fa-fw"></i> Laporan &amp; Analisis
+  </div>
+  <div class="nav-item" id="navAlerts" onclick="showView('alerts')">
+    <i class="fas fa-bell fa-fw"></i> Amaran
+    <span class="nav-badge" id="alertCount">0</span>
+  </div>
+
+  <div class="nav-section">Sistem</div>
+  <div class="nav-item" onclick="showView('settings')">
+    <i class="fas fa-cog fa-fw"></i> Tetapan &amp; Data
+  </div>
+
+  <div class="sidebar-footer">
+    <div>v1.0 &bull; Politeknik Malaysia</div>
+    <div style="margin-top:2px;color:var(--accent-green)">Ketua Jabatan</div>
+  </div>
+</nav>
+<div id="sideOverlay" onclick="closeSidebar()"></div>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <button id="menuToggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <div class="topbar-brand">
+      <img src="logo jke.png" alt="Logo JKE Together We Spark">
+      <h1 id="viewTitle">Papan Pemuka</h1>
+    </div>
+    <div class="topbar-filters" id="topbarFilters">
+      <select class="filter-select" id="filterProgram" onchange="applyFilters()">
+        <option value="">Semua Program</option>
+      </select>
+      <select class="filter-select" id="filterLab" onchange="applyFilters()">
+        <option value="">Semua Makmal</option>
+      </select>
+    </div>
+    <button class="btn-icon" onclick="showView('alerts')" title="Amaran">
+      <i class="fas fa-bell"></i>
+      <span id="alertDot"></span>
+    </button>
+    <button class="btn-icon" onclick="refreshAll()" title="Muat Semula">
+      <i class="fas fa-sync-alt"></i>
+    </button>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- VIEW: DASHBOARD                                 -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="view-dashboard" class="view active">
+      <!-- KPI CARDS -->
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <!-- ROW 1: Health + Chart Pai -->
+      <div class="section-grid grid-2-1" style="margin-bottom:16px">
+        <div class="panel">
+          <div class="panel-header">
+            <i class="fas fa-heartbeat panel-icon"></i>
+            <h3>Status Makmal</h3>
+          </div>
+          <div class="panel-body">
+            <div class="health-list" id="healthList"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <i class="fas fa-circle-half-stroke panel-icon"></i>
+            <h3>Status Peralatan</h3>
+          </div>
+          <div class="panel-body">
+            <div class="chart-wrap">
+              <canvas id="chartStatus"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 2: Bar Chart + Alerts -->
+      <div class="section-grid grid-2-1" style="margin-bottom:16px">
+        <div class="panel">
+          <div class="panel-header">
+            <i class="fas fa-layer-group panel-icon"></i>
+            <h3>Status Mengikut Kategori Peralatan</h3>
+          </div>
+          <div class="panel-body">
+            <div class="chart-wrap">
+              <canvas id="chartCategory"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <i class="fas fa-bell panel-icon"></i>
+            <h3>Amaran Terkini</h3>
+            <span id="alertCountBadge" style="font-size:10px;background:var(--status-broken);color:#fff;padding:1px 7px;border-radius:20px;font-weight:700"></span>
+          </div>
+          <div class="panel-body">
+            <div class="alert-list" id="dashAlertList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3: Smart Insights -->
+      <div class="panel">
+        <div class="panel-header">
+          <i class="fas fa-lightbulb panel-icon"></i>
+          <h3>Smart Management Insights &amp; Cadangan Tindakan</h3>
+        </div>
+        <div class="panel-body">
+          <div class="insights-list" id="insightsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- VIEW: EQUIPMENT                                 -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="view-equipment" class="view">
+      <div class="panel">
+        <div class="table-toolbar">
+          <input class="search-input" type="text" id="eqSearch" placeholder="&#xf002;  Cari nama, model, nombor aset..." oninput="renderEquipmentTable()">
+          <select class="filter-select" id="eqFilterProgram" onchange="eqFilterLabUpdate();renderEquipmentTable()">
+            <option value="">Semua Program</option>
+          </select>
+          <select class="filter-select" id="eqFilterLab" onchange="renderEquipmentTable()">
+            <option value="">Semua Makmal</option>
+          </select>
+          <select class="filter-select" id="eqFilterCat" onchange="renderEquipmentTable()">
+            <option value="">Semua Kategori</option>
+          </select>
+          <select class="filter-select" id="eqFilterStatus" onchange="renderEquipmentTable()">
+            <option value="">Semua Status</option>
+            <option value="Berfungsi">Berfungsi</option>
+            <option value="Rosak">Rosak</option>
+            <option value="Selenggara">Selenggara</option>
+            <option value="Tidak Aktif">Tidak Aktif</option>
+            <option value="Baharu">Baharu</option>
+          </select>
+          <button class="btn btn-primary" onclick="openEquipModal()"><i class="fas fa-plus"></i> Tambah Peralatan</button>
+        </div>
+        <div class="table-wrap">
+          <table id="eqTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>No. Aset</th>
+                <th>Nama Peralatan</th>
+                <th>Model / Jenama</th>
+                <th>Kategori</th>
+                <th>Makmal</th>
+                <th>Status</th>
+                <th>Selenggara Seterusnya</th>
+                <th>Tindakan</th>
+              </tr>
+            </thead>
+            <tbody id="eqTbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="eqPageInfo">-</span>
+          <div class="pagination-btns" id="eqPageBtns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- VIEW: MAINTENANCE                               -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="view-maintenance" class="view">
+      <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap">
+        <div class="panel" style="flex:1;min-width:220px">
+          <div class="panel-header"><i class="fas fa-exclamation-triangle panel-icon"></i><h3>Selenggara Tertunggak</h3></div>
+          <div class="panel-body"><div id="maintOverdue"></div></div>
+        </div>
+        <div class="panel" style="flex:1;min-width:220px">
+          <div class="panel-header"><i class="fas fa-clock panel-icon"></i><h3>Dijadualkan (7 Hari)</h3></div>
+          <div class="panel-body"><div id="maintSoon"></div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <i class="fas fa-history panel-icon"></i>
+          <h3>Sejarah Penyelenggaraan</h3>
+          <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openMaintModal()"><i class="fas fa-plus"></i> Tambah Rekod</button>
+        </div>
+        <div class="panel-body"><div class="maint-list" id="maintHistory"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- VIEW: REPORTS                                   -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="view-reports" class="view">
+      <!-- Toolbar Cetak -->
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-header">
+          <i class="fas fa-print panel-icon"></i>
+          <h3>Cetak Laporan</h3>
+        </div>
+        <div class="panel-body" style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="openPrintModal('all')"><i class="fas fa-file-alt"></i> Laporan Keseluruhan JKE</button>
+          <button class="btn btn-secondary" onclick="openPrintModal('program')"><i class="fas fa-graduation-cap"></i> Laporan Mengikut Program</button>
+          <button class="btn btn-secondary" onclick="openPrintModal('lab')"><i class="fas fa-flask"></i> Laporan Mengikut Makmal</button>
+          <button class="btn btn-secondary" onclick="openPrintModal('equipment')"><i class="fas fa-tools"></i> Senarai Peralatan</button>
+          <button class="btn btn-secondary" onclick="openPrintModal('maintenance')"><i class="fas fa-wrench"></i> Laporan Penyelenggaraan</button>
+          <button class="btn btn-secondary" onclick="openPrintModal('status')"><i class="fas fa-heartbeat"></i> Laporan Status Peralatan</button>
+        </div>
+      </div>
+
+      <div class="section-grid grid-2" style="margin-bottom:16px">
+        <div class="panel">
+          <div class="panel-header"><i class="fas fa-chart-line panel-icon"></i><h3>Ringkasan Mengikut Program</h3></div>
+          <div class="panel-body"><div id="reportProgram"></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><i class="fas fa-building panel-icon"></i><h3>Ringkasan Mengikut Makmal</h3></div>
+          <div class="panel-body"><div id="reportLab"></div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><i class="fas fa-lightbulb panel-icon"></i><h3>Analisis Penuh &amp; Cadangan Strategik</h3></div>
+        <div class="panel-body"><div class="insights-list" id="fullInsights"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- VIEW: ALERTS                                    -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="view-alerts" class="view">
+      <div class="panel">
+        <div class="panel-header">
+          <i class="fas fa-bell panel-icon"></i>
+          <h3>Semua Amaran</h3>
+          <button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="dismissAllAlerts()"><i class="fas fa-check-double"></i> Tutup Semua</button>
+        </div>
+        <div class="panel-body"><div class="alert-list" id="fullAlertList"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- VIEW: SETTINGS                                  -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <div id="view-settings" class="view">
+      <div class="settings-grid">
+        <div class="setting-card">
+          <h4><i class="fas fa-database"></i> Pengurusan Data</h4>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Urus data simulasi dan tetapan sistem.</p>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-secondary" onclick="resetSimData()"><i class="fas fa-redo"></i> Jana Semula Data Simulasi</button>
+            <button class="btn btn-danger" onclick="clearAllData()"><i class="fas fa-trash"></i> Padam Semua Data</button>
+          </div>
+        </div>
+        <div class="setting-card">
+          <h4><i class="fas fa-sliders-h"></i> Had Amaran</h4>
+          <div class="form-group">
+            <label>Had % Peralatan Rosak (Amaran Kritikal)</label>
+            <input type="number" class="form-control" id="settingCritPct" value="20" min="5" max="80">
+          </div>
+          <div class="form-group">
+            <label>Selenggara Tertunggak (bulan)</label>
+            <input type="number" class="form-control" id="settingMaintMonth" value="6" min="1" max="24">
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> Simpan Tetapan</button>
+        </div>
+        <div class="setting-card">
+          <h4><i class="fas fa-info-circle"></i> Maklumat Sistem</h4>
+          <div style="font-size:12px;line-height:1.8;color:var(--text-muted)">
+            <div>Versi: <span style="color:var(--text-primary)">1.0.0</span></div>
+            <div>Jabatan: <span style="color:var(--text-primary)">Kejuruteraan Elektrik</span></div>
+            <div>Institusi: <span style="color:var(--text-primary)">Politeknik Malaysia</span></div>
+            <div>Storan: <span style="color:var(--text-primary)">Browser localStorage</span></div>
+            <div id="settingStats" style="margin-top:8px"></div>
+          </div>
+        </div>
+        <div class="setting-card">
+          <h4><i class="fas fa-palette"></i> Petunjuk Status</h4>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px">
+            <div style="display:flex;align-items:center;gap:8px"><span class="status-badge s-ok">Berfungsi</span> Beroperasi normal</div>
+            <div style="display:flex;align-items:center;gap:8px"><span class="status-badge s-broken">Rosak</span> Tidak boleh digunakan</div>
+            <div style="display:flex;align-items:center;gap:8px"><span class="status-badge s-maintain">Selenggara</span> Dalam proses baik pulih</div>
+            <div style="display:flex;align-items:center;gap:8px"><span class="status-badge s-inactive">Tidak Aktif</span> Tidak digunakan / simpan</div>
+            <div style="display:flex;align-items:center;gap:8px"><span class="status-badge s-new">Baharu</span> Baru diterima, belum diperiksa</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end #content -->
+</div><!-- end #main -->
+
+<!-- ═══ MODAL: EQUIPMENT FORM ═══ -->
+<div class="modal-overlay" id="equipModal">
+  <div class="modal">
+    <div class="modal-header">
+      <i class="fas fa-tools" style="color:var(--accent-green)"></i>
+      <h3 id="equipModalTitle">Tambah Peralatan Baharu</h3>
+      <button class="modal-close" onclick="closeModal('equipModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="equipId">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nombor Aset *</label>
+          <input type="text" class="form-control" id="fAsset" placeholder="JKE/XXX/001">
+        </div>
+        <div class="form-group">
+          <label>Nama Peralatan *</label>
+          <input type="text" class="form-control" id="fName" placeholder="Contoh: PLC Siemens S7-1200">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Model</label>
+          <input type="text" class="form-control" id="fModel" placeholder="Contoh: S7-1200">
+        </div>
+        <div class="form-group">
+          <label>Jenama</label>
+          <input type="text" class="form-control" id="fBrand" placeholder="Contoh: Siemens">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Kategori *</label>
+          <select class="form-control" id="fCategory">
+            <option value="">-- Pilih --</option>
+            <option>Peralatan Elektrik</option>
+            <option>Peralatan Elektronik</option>
+            <option>Peralatan Telekomunikasi</option>
+            <option>PLC dan Automasi</option>
+            <option>Komputer dan Rangkaian</option>
+            <option>IoT dan Mikropengawal</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Program *</label>
+          <select class="form-control" id="fProgram" onchange="updateFormLabs()">
+            <option value="">-- Pilih --</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Makmal *</label>
+          <select class="form-control" id="fLab">
+            <option value="">-- Pilih Program Dahulu --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status *</label>
+          <select class="form-control" id="fStatus">
+            <option value="Baharu">Baharu</option>
+            <option value="Berfungsi">Berfungsi</option>
+            <option value="Rosak">Rosak</option>
+            <option value="Selenggara">Selenggara</option>
+            <option value="Tidak Aktif">Tidak Aktif</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tarikh Perolehan</label>
+          <input type="date" class="form-control" id="fAcquired">
+        </div>
+        <div class="form-group">
+          <label>Tarikh Selenggara Seterusnya</label>
+          <input type="date" class="form-control" id="fNextMaint">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Catatan</label>
+        <textarea class="form-control" id="fNotes" placeholder="Catatan tambahan..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('equipModal')">Batal</button>
+      <button class="btn btn-primary" onclick="saveEquipment()"><i class="fas fa-save"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: MAINTENANCE FORM ═══ -->
+<div class="modal-overlay" id="maintModal">
+  <div class="modal">
+    <div class="modal-header">
+      <i class="fas fa-wrench" style="color:var(--accent-green)"></i>
+      <h3>Tambah Rekod Penyelenggaraan</h3>
+      <button class="modal-close" onclick="closeModal('maintModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Peralatan *</label>
+        <select class="form-control" id="mfEquip">
+          <option value="">-- Pilih Peralatan --</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tarikh Penyelenggaraan *</label>
+          <input type="date" class="form-control" id="mfDate">
+        </div>
+        <div class="form-group">
+          <label>Jenis Penyelenggaraan</label>
+          <select class="form-control" id="mfType">
+            <option>Penyelenggaraan Berkala</option>
+            <option>Pembaikan</option>
+            <option>Kalibrasi</option>
+            <option>Pembersihan</option>
+            <option>Penggantian Komponen</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Tindakan Yang Diambil</label>
+        <textarea class="form-control" id="mfNotes" placeholder="Huraikan tindakan penyelenggaraan..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Kemaskini Status Peralatan Selepas Selenggara</label>
+        <select class="form-control" id="mfStatus">
+          <option value="">-- Kekal Status Semasa --</option>
+          <option value="Berfungsi">Berfungsi</option>
+          <option value="Rosak">Rosak</option>
+          <option value="Tidak Aktif">Tidak Aktif</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('maintModal')">Batal</button>
+      <button class="btn btn-primary" onclick="saveMaintenance()"><i class="fas fa-save"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: CONFIRM ═══ -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <div class="modal-header">
+      <i class="fas fa-exclamation-triangle" style="color:var(--status-broken)"></i>
+      <h3 id="confirmTitle">Sahkan Tindakan</h3>
+      <button class="modal-close" onclick="closeModal('confirmModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirmMsg"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('confirmModal')">Batal</button>
+      <button class="btn btn-danger" id="confirmOkBtn">Padam</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"><i class="fas fa-check-circle" style="color:var(--accent-green)"></i><span id="toastMsg"></span></div>
+
+<!-- ═══ MODAL: PILIHAN CETAK ═══ -->
+<div class="modal-overlay" id="printModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <i class="fas fa-print" style="color:var(--accent-green)"></i>
+      <h3 id="printModalTitle">Cetak Laporan</h3>
+      <button class="modal-close" onclick="closeModal('printModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="printFilterWrap" style="display:none">
+        <div class="form-group" id="printProgramGroup" style="display:none">
+          <label>Pilih Program</label>
+          <select class="form-control" id="printProgram">
+            <option value="">Semua Program</option>
+          </select>
+        </div>
+        <div class="form-group" id="printLabGroup" style="display:none">
+          <label>Pilih Makmal</label>
+          <select class="form-control" id="printLab">
+            <option value="">Semua Makmal</option>
+          </select>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);line-height:1.6" id="printDesc">
+        Laporan akan dijana mengikut data semasa dalam sistem.
+      </p>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-top:12px;font-size:11px;color:var(--text-muted)">
+        <i class="fas fa-info-circle" style="color:var(--accent-blue)"></i>
+        Dialog pencetak akan dibuka. Pilih <strong style="color:var(--text-primary)">pencetak fizikal</strong> atau pilih
+        <strong style="color:var(--text-primary)">"Save as PDF"</strong> untuk menyimpan sebagai fail PDF.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('printModal')">Batal</button>
+      <button class="btn btn-primary" id="printGoBtn" onclick="executePrint()"><i class="fas fa-print"></i> Cetak Sekarang</button>
+    </div>
+  </div>
+</div>
+
+<!-- KAWASAN CETAKAN TERSEMBUNYI -->
+<div id="printArea" style="display:none"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CONSTANTS & GLOBALS
+// ═══════════════════════════════════════════════════════════
+const KEYS = {
+  programs:'jke_programs', labs:'jke_labs', equipment:'jke_equipment',
+  maintenance:'jke_maintenance', alerts:'jke_alerts', settings:'jke_settings'
+};
+let chartStatus = null, chartCategory = null;
+let eqPage = 1; const EQ_PER_PAGE = 12;
+let currentFilter = { program:'', lab:'' };
+
+// ═══════════════════════════════════════════════════════════
+//  STORAGE HELPERS
+// ═══════════════════════════════════════════════════════════
+const load = k => JSON.parse(localStorage.getItem(k)||'[]');
+const save = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+const loadObj = k => JSON.parse(localStorage.getItem(k)||'{}');
+const saveObj = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const today = () => new Date().toISOString().slice(0,10);
+const fmtDate = d => d ? new Date(d).toLocaleDateString('ms-MY',{day:'2-digit',month:'short',year:'numeric'}) : '-';
+
+// ═══════════════════════════════════════════════════════════
+//  SIMULATION DATA
+// ═══════════════════════════════════════════════════════════
+function buildSimData() {
+  // ── 3 Program sebenar JKE Politeknik Kota Bharu ──
+  const programs = [
+    { id:'p1', code:'DET', name:'Diploma Kejuruteraan Elektrik (DET)',                     head:'Ketua Program DET' },
+    { id:'p2', code:'DEE', name:'Diploma Kejuruteraan Elektrik dan Elektronik (DEE)',       head:'Ketua Program DEE' },
+    { id:'p3', code:'DEP', name:'Diploma Kejuruteraan Elektronik (Telekomunikasi) (DEP)',   head:'Ketua Program DEP' },
+  ];
+  // ── 6 Makmal: 2 per program ──
+  const labs = [
+    { id:'l1', code:'LAB-ELK', name:'Makmal Elektrik Kuasa',           program_id:'p1', coordinator:'Penyelaras Makmal 1', capacity:30 },
+    { id:'l2', code:'LAB-PLC', name:'Makmal PLC & Automasi',           program_id:'p1', coordinator:'Penyelaras Makmal 2', capacity:25 },
+    { id:'l3', code:'LAB-ELA', name:'Makmal Elektronik Asas',          program_id:'p2', coordinator:'Penyelaras Makmal 3', capacity:28 },
+    { id:'l4', code:'LAB-KAW', name:'Makmal Kawalan & Instrumentasi',  program_id:'p2', coordinator:'Penyelaras Makmal 4', capacity:24 },
+    { id:'l5', code:'LAB-TLK', name:'Makmal Telekomunikasi',           program_id:'p3', coordinator:'Penyelaras Makmal 5', capacity:22 },
+    { id:'l6', code:'LAB-RIT', name:'Makmal Rangkaian & IoT',          program_id:'p3', coordinator:'Penyelaras Makmal 6', capacity:28 },
+  ];
+
+  const cats = ['Peralatan Elektrik','Peralatan Elektronik','Peralatan Telekomunikasi','PLC dan Automasi','Komputer dan Rangkaian','IoT dan Mikropengawal'];
+
+  // Equipment rows: [assetNo, name, model, brand, category, labId, status, acquired, nextMaint, notes]
+  const rawEq = [
+    // ── DET: LAB ELEKTRIK KUASA (l1) ──
+    ['JKE/ELK/001','Panel Pendawaian 3 Fasa','DP3P-60A','Schneider','Peralatan Elektrik','l1','Berfungsi','2021-05-20','2025-05-20',''],
+    ['JKE/ELK/002','Transformer Kuasa 5kVA','TRF-5K','ABB','Peralatan Elektrik','l1','Berfungsi','2020-09-15','2025-09-15',''],
+    ['JKE/ELK/003','Motor Induksi 3 Fasa','YE3-90L','TECO','Peralatan Elektrik','l1','Selenggara','2019-03-10','2024-03-10','Bearing haus - penggantian dijadualkan'],
+    ['JKE/ELK/004','Multimeter Digital','Fluke 87V','Fluke','Peralatan Elektrik','l1','Berfungsi','2022-07-01','2025-07-01',''],
+    ['JKE/ELK/005','Multimeter Digital','Fluke 87V','Fluke','Peralatan Elektrik','l1','Berfungsi','2022-07-01','2025-07-01',''],
+    ['JKE/ELK/006','Clamp Meter','CM-1000','Hioki','Peralatan Elektrik','l1','Rosak','2021-01-05','2024-01-05','Layar pecah'],
+    ['JKE/ELK/007','Power Supply DC 30V','GPS-3030DD','GW Instek','Peralatan Elektrik','l1','Berfungsi','2022-03-20','2025-03-20',''],
+    ['JKE/ELK/008','Power Supply DC 30V','GPS-3030DD','GW Instek','Peralatan Elektrik','l1','Berfungsi','2022-03-20','2025-03-20',''],
+    ['JKE/ELK/009','Oscilloscope 100MHz','GDS-1102A','GW Instek','Peralatan Elektronik','l1','Berfungsi','2023-01-10','2026-01-10',''],
+    ['JKE/ELK/010','Papan Trainer Pendawaian','WTB-300','Generic','Peralatan Elektrik','l1','Tidak Aktif','2018-06-01',null,'Rosak teruk - cadang lupus'],
+    // ── DET: LAB PLC & AUTOMASI (l2) ──
+    ['JKE/PLC/001','PLC Siemens S7-1200','CPU 1214C','Siemens','PLC dan Automasi','l2','Berfungsi','2021-03-10','2025-03-10','Unit utama PLC Siemens'],
+    ['JKE/PLC/002','PLC Allen-Bradley MicroLogix','1100','Allen-Bradley','PLC dan Automasi','l2','Rosak','2020-06-15','2024-12-01','Modul output terbakar'],
+    ['JKE/PLC/003','PLC Omron CP1E','CP1E-N30','Omron','PLC dan Automasi','l2','Berfungsi','2022-01-20','2025-07-20',''],
+    ['JKE/PLC/004','HMI Siemens KTP700','KTP700 Basic','Siemens','PLC dan Automasi','l2','Selenggara','2021-08-05','2025-01-05','Skrin sentuh rosak - dalam pembaikan'],
+    ['JKE/PLC/005','Servo Drive Mitsubishi','MR-J4-10A','Mitsubishi','PLC dan Automasi','l2','Berfungsi','2023-02-14','2026-02-14',''],
+    ['JKE/PLC/006','Motor DC 24V','YN60-20','Generic','Peralatan Elektrik','l2','Tidak Aktif','2019-11-01','2024-05-01','Stok simpanan'],
+    ['JKE/PLC/007','Trainer Kit PLC Festo','FMS-200','Festo','PLC dan Automasi','l2','Berfungsi','2022-09-01','2025-09-01',''],
+    ['JKE/PLC/008','Pneumatik Silinder Set','DNC-40','Festo','PLC dan Automasi','l2','Rosak','2020-04-10','2024-04-10','Bocor pada fitting'],
+    // ── DEE: LAB ELEKTRONIK ASAS (l3) ──
+    ['JKE/ELA/001','Oscilloscope 50MHz','GDS-1052A','GW Instek','Peralatan Elektronik','l3','Berfungsi','2021-10-01','2025-10-01',''],
+    ['JKE/ELA/002','Oscilloscope 50MHz','GDS-1052A','GW Instek','Peralatan Elektronik','l3','Rosak','2021-10-01','2024-06-01','Probe rosak - perlu ganti'],
+    ['JKE/ELA/003','Function Generator','GFG-8216A','GW Instek','Peralatan Elektronik','l3','Berfungsi','2022-04-15','2025-04-15',''],
+    ['JKE/ELA/004','Function Generator','GFG-8216A','GW Instek','Peralatan Elektronik','l3','Berfungsi','2022-04-15','2025-04-15',''],
+    ['JKE/ELA/005','Digital Trainer Kit','DL-1000','Maplin','Peralatan Elektronik','l3','Selenggara','2020-08-20','2024-08-20','Bekalan kuasa unit bermasalah'],
+    ['JKE/ELA/006','Breadboard Kit Set','BB-001','Generic','Peralatan Elektronik','l3','Berfungsi','2023-06-01','2026-06-01','Set 30 unit'],
+    ['JKE/ELA/007','LCR Meter','LCR-6002','GW Instek','Peralatan Elektronik','l3','Berfungsi','2022-11-10','2025-11-10',''],
+    ['JKE/ELA/008','Soldering Station','FX-888D','Hakko','Peralatan Elektronik','l3','Rosak','2020-05-01','2024-05-01','Hujung pematri rosak'],
+    ['JKE/ELA/009','Power Supply Bench','GPD-3303D','GW Instek','Peralatan Elektronik','l3','Berfungsi','2021-09-15','2025-09-15',''],
+    // ── DEE: LAB KAWALAN & INSTRUMENTASI (l4) ──
+    ['JKE/KAW/001','FPGA Development Board','DE0-Nano','Terasic','Peralatan Elektronik','l4','Berfungsi','2022-06-10','2025-06-10','Intel Altera Cyclone IV'],
+    ['JKE/KAW/002','DSP Processor Kit','F28335','Texas Instruments','Peralatan Elektronik','l4','Berfungsi','2021-12-01','2025-12-01',''],
+    ['JKE/KAW/003','Spectrum Analyser','GSP-9300','GW Instek','Peralatan Elektronik','l4','Rosak','2020-03-15','2024-03-15','Paparan tidak berfungsi'],
+    ['JKE/KAW/004','PCB Prototyping Kit','PCB-KIT','Generic','Peralatan Elektronik','l4','Berfungsi','2023-08-01','2026-08-01',''],
+    ['JKE/KAW/005','Digital Multimeter','34450A','Keysight','Peralatan Elektronik','l4','Berfungsi','2022-02-20','2025-02-20',''],
+    ['JKE/KAW/006','Pengawal Suhu PID','TC300','Autonics','PLC dan Automasi','l4','Berfungsi','2022-05-10','2025-05-10',''],
+    ['JKE/KAW/007','Sensor Tekanan','PTG510','Keller','Peralatan Elektronik','l4','Rosak','2021-07-01','2024-07-01','Salur tekanan bocor'],
+    // ── DEP: LAB TELEKOMUNIKASI (l5) ──
+    ['JKE/TLK/001','Spectrum Analyser Portable','FSH4','Rohde&Schwarz','Peralatan Telekomunikasi','l5','Berfungsi','2020-10-01','2025-10-01',''],
+    ['JKE/TLK/002','Antenna Training Kit','ANT-200','Generic','Peralatan Telekomunikasi','l5','Rosak','2019-08-10','2023-08-10','Kabel penyambung putus'],
+    ['JKE/TLK/003','Signal Generator RF','SG-4162','GW Instek','Peralatan Telekomunikasi','l5','Berfungsi','2022-01-05','2025-01-05',''],
+    ['JKE/TLK/004','SDR Kit','RTL-SDR','NooElec','Peralatan Telekomunikasi','l5','Baharu','2024-09-01',null,'Baru diterima - belum dikonfigurasikan'],
+    ['JKE/TLK/005','Fibre Optic Trainer','FOT-100','Generic','Peralatan Telekomunikasi','l5','Selenggara','2020-06-20','2024-06-20','Kabel gentian optik retak'],
+    ['JKE/TLK/006','VSAT Modem Trainer','iDirect','iDirect','Peralatan Telekomunikasi','l5','Tidak Aktif','2018-03-01',null,'Teknologi lapuk - cadang ganti'],
+    ['JKE/TLK/007','Network Analyser','DTX-1800','Fluke','Peralatan Telekomunikasi','l5','Berfungsi','2021-05-20','2025-05-20',''],
+    // ── DEP: LAB RANGKAIAN & IOT (l6) ──
+    ['JKE/RIT/001','Router Cisco 2900','ISR 2921','Cisco','Komputer dan Rangkaian','l6','Berfungsi','2021-07-01','2025-07-01',''],
+    ['JKE/RIT/002','Switch Cisco Catalyst','WS-C2960','Cisco','Komputer dan Rangkaian','l6','Berfungsi','2021-07-01','2025-07-01',''],
+    ['JKE/RIT/003','Switch Cisco Catalyst','WS-C2960','Cisco','Komputer dan Rangkaian','l6','Rosak','2020-11-10','2024-11-10','Port 1-8 tidak berfungsi'],
+    ['JKE/RIT/004','ESP32 Dev Kit','ESP32-WROOM','Espressif','IoT dan Mikropengawal','l6','Berfungsi','2023-04-01','2026-04-01','Set 30 unit'],
+    ['JKE/RIT/005','Arduino Uno R3','ATmega328P','Arduino','IoT dan Mikropengawal','l6','Berfungsi','2022-10-15','2025-10-15','Set 25 unit'],
+    ['JKE/RIT/006','Raspberry Pi 4','Model 4B','Raspberry Pi','IoT dan Mikropengawal','l6','Rosak','2022-06-01','2024-06-01','3 unit - SD card rosak'],
+    ['JKE/RIT/007','Sensor Suhu DHT22','DHT22','AOSONG','IoT dan Mikropengawal','l6','Berfungsi','2023-07-10','2026-07-10','Set 40 unit'],
+    ['JKE/RIT/008','NodeMCU ESP8266','ESP8266','Espressif','IoT dan Mikropengawal','l6','Berfungsi','2023-01-20','2026-01-20','Set 20 unit'],
+    ['JKE/RIT/009','Modul Relay 4-Channel','SRD-05VDC','Songle','IoT dan Mikropengawal','l6','Selenggara','2022-03-10','2024-03-10','Beberapa saluran terbakar'],
+    ['JKE/RIT/010','Patch Panel 24-Port','PP-24','AMP','Komputer dan Rangkaian','l6','Berfungsi','2022-03-01','2025-03-01',''],
+    ['JKE/RIT/011','Wireless AP','UAP-AC-PRO','Ubiquiti','Komputer dan Rangkaian','l6','Selenggara','2021-11-01','2024-11-01','Konfigurasi semula diperlukan'],
+    ['JKE/RIT/012','Sensor Ultrasonic HC-SR04','HC-SR04','Generic','IoT dan Mikropengawal','l6','Rosak','2022-08-01','2024-08-01','15 unit rosak - tindakan voltan lebih'],
+  ];
+
+  const equipment = rawEq.map(r => ({
+    id: uid(),
+    asset_no: r[0], name: r[1], model: r[2], brand: r[3],
+    category: r[4], lab_id: r[5], status: r[6],
+    acquired: r[7], next_maintenance: r[8] || null,
+    notes: r[9], created_at: new Date().toISOString()
+  }));
+
+  const daysAgo = n => { const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); };
+
+  const maintenance = [
+    { id:uid(), equip_id:'', date: daysAgo(180), type:'Penyelenggaraan Berkala', notes:'Pemeriksaan umum, pembersihan dan pelinciran motor induksi', technician:'Penyelaras Makmal 1' },
+    { id:uid(), equip_id:'', date: daysAgo(95),  type:'Pembaikan',              notes:'Penggantian bearing motor induksi 3 fasa', technician:'Penyelaras Makmal 1' },
+    { id:uid(), equip_id:'', date: daysAgo(45),  type:'Kalibrasi',              notes:'Kalibrasi semula oscilloscope mengikut piawaian ISO', technician:'Penyelaras Makmal 3' },
+    { id:uid(), equip_id:'', date: daysAgo(200), type:'Pembaikan',              notes:'Penggantian probe oscilloscope yang rosak', technician:'Penyelaras Makmal 3' },
+    { id:uid(), equip_id:'', date: daysAgo(30),  type:'Pembersihan',            notes:'Pembersihan menyeluruh unit PLC dan ujian fungsi semua I/O', technician:'Penyelaras Makmal 2' },
+  ];
+
+  // Assign equip ids to maintenance
+  maintenance[0].equip_id = equipment.find(e=>e.asset_no==='JKE/ELK/003').id;
+  maintenance[1].equip_id = equipment.find(e=>e.asset_no==='JKE/ELK/003').id;
+  maintenance[2].equip_id = equipment.find(e=>e.asset_no==='JKE/ELA/001').id;
+  maintenance[3].equip_id = equipment.find(e=>e.asset_no==='JKE/ELA/002').id;
+  maintenance[4].equip_id = equipment.find(e=>e.asset_no==='JKE/PLC/003').id;
+
+  save(KEYS.programs, programs);
+  save(KEYS.labs, labs);
+  save(KEYS.equipment, equipment);
+  save(KEYS.maintenance, maintenance);
+  save(KEYS.alerts, []);
+  saveObj(KEYS.settings, { criticalPct: 20, maintMonths: 6 });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ANALYTICS ENGINE
+// ═══════════════════════════════════════════════════════════
+function getStatusClass(s) {
+  const m={'Berfungsi':'s-ok','Rosak':'s-broken','Selenggara':'s-maintain','Tidak Aktif':'s-inactive','Baharu':'s-new'};
+  return m[s]||'s-inactive';
+}
+function getScoreClass(s) {
+  if(s>=90) return 'score-ex';
+  if(s>=75) return 'score-gd';
+  if(s>=60) return 'score-md';
+  if(s>=40) return 'score-lw';
+  return 'score-cr';
+}
+function getScoreColor(s) {
+  if(s>=90) return '#22c55e';
+  if(s>=75) return '#4fc3f7';
+  if(s>=60) return '#f59e0b';
+  if(s>=40) return '#fb923c';
+  return '#ef4444';
+}
+function getScoreLabel(s) {
+  if(s>=90) return 'Cemerlang';
+  if(s>=75) return 'Baik';
+  if(s>=60) return 'Sederhana';
+  if(s>=40) return 'Lemah';
+  return 'Kritikal';
+}
+
+function calcLabHealth(labId, equipment) {
+  const eq = equipment.filter(e=>e.lab_id===labId);
+  if(!eq.length) return { score:100, total:0, ok:0, broken:0, maintain:0, inactive:0 };
+  let ok=0,broken=0,maintain=0,inactive=0,newE=0;
+  eq.forEach(e=>{
+    if(e.status==='Berfungsi') ok++;
+    else if(e.status==='Rosak') broken++;
+    else if(e.status==='Selenggara') maintain++;
+    else if(e.status==='Baharu') newE++;
+    else inactive++;
+  });
+  const weighted = ok*1.0 + maintain*0.5 + newE*0.8 + inactive*0.2 + broken*0;
+  const score = Math.round((weighted / eq.length)*100);
+  return { score, total:eq.length, ok, broken, maintain, inactive, newE };
+}
+
+function computeKPIs(equipment, filterProgram, filterLab) {
+  let eq = equipment;
+  if(filterProgram) {
+    const labs = load(KEYS.labs).filter(l=>l.program_id===filterProgram).map(l=>l.id);
+    eq = eq.filter(e=>labs.includes(e.lab_id));
+  }
+  if(filterLab) eq = eq.filter(e=>e.lab_id===filterLab);
+  const total = eq.length;
+  const ok = eq.filter(e=>e.status==='Berfungsi').length;
+  const broken = eq.filter(e=>e.status==='Rosak').length;
+  const maintain = eq.filter(e=>e.status==='Selenggara').length;
+  const inactive = eq.filter(e=>e.status==='Tidak Aktif').length;
+  return {total,ok,broken,maintain,inactive};
+}
+
+function generateInsights(equipment, labs, settings) {
+  const insights = [];
+  const pct20 = settings.criticalPct || 20;
+
+  labs.forEach(lab=>{
+    const h = calcLabHealth(lab.id, equipment);
+    if(!h.total) return;
+    const brokenPct = Math.round((h.broken/h.total)*100);
+    if(h.score < 50) {
+      insights.push({ type:'critical', icon:'fa-exclamation-circle',
+        title:`${lab.name} — Skor Kritikal: ${h.score}%`,
+        msg:`${h.broken} daripada ${h.total} peralatan (${brokenPct}%) dalam keadaan rosak. Tindakan segera diperlukan sebelum sesi pengajaran.` });
+    } else if(brokenPct > pct20) {
+      insights.push({ type:'warning', icon:'fa-exclamation-triangle',
+        title:`${lab.name} — Kadar Kerosakan Tinggi`,
+        msg:`${brokenPct}% peralatan rosak melebihi had ${pct20}%. Cadangan: Lakukan pemeriksaan dan hantar untuk baik pulih.` });
+    }
+  });
+
+  const cats = ['Peralatan Elektrik','Peralatan Elektronik','Peralatan Telekomunikasi','PLC dan Automasi','Komputer dan Rangkaian','IoT dan Mikropengawal'];
+  cats.forEach(cat=>{
+    const catEq = equipment.filter(e=>e.category===cat);
+    if(!catEq.length) return;
+    const broken = catEq.filter(e=>e.status==='Rosak').length;
+    const pct = Math.round((broken/catEq.length)*100);
+    if(pct>30) {
+      insights.push({ type:'warning', icon:'fa-layer-group',
+        title:`Kategori "${cat}" — Kadar Rosak ${pct}%`,
+        msg:`${broken} unit rosak daripada ${catEq.length} unit dalam kategori ini. Cadangan: Semak semula prosedur penggunaan dan pengendalian.` });
+    }
+  });
+
+  // Maintenance overdue
+  const settings6 = settings.maintMonths || 6;
+  const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth()-settings6);
+  equipment.forEach(e=>{
+    if(e.next_maintenance && new Date(e.next_maintenance) < cutoff && e.status!=='Rosak') {
+      insights.push({ type:'info', icon:'fa-clock',
+        title:`Penyelenggaraan Tertunggak: ${e.name}`,
+        msg:`Tarikh penyelenggaraan (${fmtDate(e.next_maintenance)}) telah melebihi ${settings6} bulan. Cadangan: Jadualkan penyelenggaraan segera.` });
+    }
+  });
+
+  // Good labs
+  const goodLabs = labs.filter(lab=>{ const h=calcLabHealth(lab.id,equipment); return h.total>0 && h.score>=90; });
+  if(goodLabs.length>0) {
+    insights.push({ type:'good', icon:'fa-check-circle',
+      title:`${goodLabs.length} Makmal Dalam Keadaan Cemerlang`,
+      msg:`${goodLabs.map(l=>l.name).join(', ')} mencapai skor ≥90%. Teruskan amalan penyelenggaraan yang baik.` });
+  }
+
+  if(!insights.length) {
+    insights.push({ type:'good', icon:'fa-thumbs-up', title:'Semua Makmal Dalam Keadaan Terkawal', msg:'Tiada isu kritikal dikesan. Teruskan pemantauan berkala.' });
+  }
+  return insights;
+}
+
+function generateAlerts(equipment, labs) {
+  const existing = load(KEYS.alerts);
+  const settings = loadObj(KEYS.settings);
+  const pct = settings.criticalPct || 20;
+  const newAlerts = [];
+  const today7 = new Date(); today7.setDate(today7.getDate()+7);
+
+  labs.forEach(lab=>{
+    const h = calcLabHealth(lab.id, equipment);
+    if(!h.total) return;
+    const brokenPct = (h.broken/h.total)*100;
+    if(h.score<50) {
+      newAlerts.push({ id:uid(), type:'critical', msg:`Makmal kritikal: ${lab.name} — Skor ${h.score}% (${h.broken} peralatan rosak)`, time: new Date().toISOString(), dismissed:false });
+    } else if(brokenPct>pct) {
+      newAlerts.push({ id:uid(), type:'warning', msg:`Kadar kerosakan tinggi di ${lab.name}: ${Math.round(brokenPct)}% (had: ${pct}%)`, time: new Date().toISOString(), dismissed:false });
+    }
+  });
+
+  equipment.forEach(e=>{
+    if(e.status==='Rosak') {
+      const already = existing.some(a=>a.ref===e.id && a.type==='broken' && !a.dismissed);
+      if(!already) {
+        newAlerts.push({ id:uid(), type:'warning', ref:e.id, msg:`Peralatan rosak: ${e.name} (${e.asset_no}) di ${getLabName(e.lab_id)}`, time: new Date().toISOString(), dismissed:false });
+      }
+    }
+    if(e.next_maintenance && new Date(e.next_maintenance)<=today7 && new Date(e.next_maintenance)>=new Date()) {
+      newAlerts.push({ id:uid(), type:'info', msg:`Penyelenggaraan akan datang: ${e.name} pada ${fmtDate(e.next_maintenance)}`, time: new Date().toISOString(), dismissed:false });
+    }
+  });
+
+  // Deduplicate by message
+  const seen = new Set();
+  const deduped = newAlerts.filter(a=>{ if(seen.has(a.msg)) return false; seen.add(a.msg); return true; });
+  save(KEYS.alerts, deduped);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════
+function getLabName(id) { return (load(KEYS.labs).find(l=>l.id===id)||{}).name||'-'; }
+function getProgramName(id) { return (load(KEYS.programs).find(p=>p.id===id)||{}).name||'-'; }
+function getLabProgram(labId) { return (load(KEYS.labs).find(l=>l.id===labId)||{}).program_id||''; }
+
+function filterEquipment() {
+  const all = load(KEYS.equipment);
+  let eq = all;
+  if(currentFilter.program) {
+    const labIds = load(KEYS.labs).filter(l=>l.program_id===currentFilter.program).map(l=>l.id);
+    eq = eq.filter(e=>labIds.includes(e.lab_id));
+  }
+  if(currentFilter.lab) eq = eq.filter(e=>e.lab_id===currentFilter.lab);
+  return eq;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  POPULATE FILTER DROPDOWNS
+// ═══════════════════════════════════════════════════════════
+function populateFilters() {
+  const programs = load(KEYS.programs);
+  const labs = load(KEYS.labs);
+
+  ['filterProgram','eqFilterProgram','fProgram'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const val = el.value;
+    const isForm = id==='fProgram';
+    el.innerHTML = isForm ? '<option value="">-- Pilih --</option>' : '<option value="">Semua Program</option>';
+    programs.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=p.name; el.appendChild(o); });
+    if(val) el.value=val;
+  });
+
+  const labSel = document.getElementById('filterLab');
+  if(labSel) {
+    const curProg = document.getElementById('filterProgram')?.value || '';
+    const filtered = curProg ? labs.filter(l=>l.program_id===curProg) : labs;
+    labSel.innerHTML = '<option value="">Semua Makmal</option>';
+    filtered.forEach(l=>{ const o=document.createElement('option'); o.value=l.id; o.textContent=l.name; labSel.appendChild(o); });
+  }
+
+  const eqLabSel = document.getElementById('eqFilterLab');
+  if(eqLabSel) {
+    const curProg = document.getElementById('eqFilterProgram')?.value || '';
+    const filtered = curProg ? labs.filter(l=>l.program_id===curProg) : labs;
+    eqLabSel.innerHTML = '<option value="">Semua Makmal</option>';
+    filtered.forEach(l=>{ const o=document.createElement('option'); o.value=l.id; o.textContent=l.name; eqLabSel.appendChild(o); });
+  }
+
+  const catSel = document.getElementById('eqFilterCat');
+  if(catSel && catSel.options.length<=1) {
+    ['Peralatan Elektrik','Peralatan Elektronik','Peralatan Telekomunikasi','PLC dan Automasi','Komputer dan Rangkaian','IoT dan Mikropengawal'].forEach(c=>{
+      const o=document.createElement('option'); o.value=c; o.textContent=c; catSel.appendChild(o);
+    });
+  }
+}
+
+function eqFilterLabUpdate() {
+  const prog = document.getElementById('eqFilterProgram')?.value||'';
+  const labs = load(KEYS.labs);
+  const eqLabSel = document.getElementById('eqFilterLab');
+  if(!eqLabSel) return;
+  const filtered = prog ? labs.filter(l=>l.program_id===prog) : labs;
+  eqLabSel.innerHTML = '<option value="">Semua Makmal</option>';
+  filtered.forEach(l=>{ const o=document.createElement('option'); o.value=l.id; o.textContent=l.name; eqLabSel.appendChild(o); });
+}
+
+function updateFormLabs() {
+  const prog = document.getElementById('fProgram')?.value||'';
+  const labs = load(KEYS.labs);
+  const labSel = document.getElementById('fLab');
+  if(!labSel) return;
+  const filtered = prog ? labs.filter(l=>l.program_id===prog) : [];
+  labSel.innerHTML = prog ? '<option value="">-- Pilih Makmal --</option>' : '<option value="">-- Pilih Program Dahulu --</option>';
+  filtered.forEach(l=>{ const o=document.createElement('option'); o.value=l.id; o.textContent=l.name; labSel.appendChild(o); });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function renderDashboard() {
+  const equipment = filterEquipment();
+  const allLabs = load(KEYS.labs);
+  const allEquip = load(KEYS.equipment);
+  const settings = loadObj(KEYS.settings);
+
+  // Filter labs for display
+  let dispLabs = allLabs;
+  if(currentFilter.lab) dispLabs = allLabs.filter(l=>l.id===currentFilter.lab);
+  else if(currentFilter.program) dispLabs = allLabs.filter(l=>l.program_id===currentFilter.program);
+
+  const kpis = computeKPIs(allEquip, currentFilter.program, currentFilter.lab);
+
+  // KPI Cards
+  const kpiGrid = document.getElementById('kpiGrid');
+  kpiGrid.innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#4fc3f722"><i class="fas fa-boxes" style="color:var(--accent-blue)"></i></div>
+      <div class="kpi-info">
+        <div class="kpi-value" style="color:var(--accent-blue)">${kpis.total}</div>
+        <div class="kpi-label">Jumlah Aset</div>
+        <div class="kpi-sub">${dispLabs.length} Makmal</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#22c55e22"><i class="fas fa-check-circle" style="color:var(--status-ok)"></i></div>
+      <div class="kpi-info">
+        <div class="kpi-value" style="color:var(--status-ok)">${kpis.ok}</div>
+        <div class="kpi-label">Berfungsi</div>
+        <div class="kpi-sub">${kpis.total?Math.round(kpis.ok/kpis.total*100):0}% daripada jumlah</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#ef444422"><i class="fas fa-times-circle" style="color:var(--status-broken)"></i></div>
+      <div class="kpi-info">
+        <div class="kpi-value" style="color:var(--status-broken)">${kpis.broken}</div>
+        <div class="kpi-label">Rosak</div>
+        <div class="kpi-sub">${kpis.total?Math.round(kpis.broken/kpis.total*100):0}% daripada jumlah</div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#f59e0b22"><i class="fas fa-wrench" style="color:var(--status-maintain)"></i></div>
+      <div class="kpi-info">
+        <div class="kpi-value" style="color:var(--status-maintain)">${kpis.maintain}</div>
+        <div class="kpi-label">Selenggara</div>
+        <div class="kpi-sub">${kpis.inactive} Tidak Aktif</div>
+      </div>
+    </div>`;
+
+  // Health Bars
+  const healthList = document.getElementById('healthList');
+  healthList.innerHTML = '';
+  dispLabs.forEach(lab=>{
+    const h = calcLabHealth(lab.id, allEquip);
+    if(!h.total) return;
+    const col = getScoreColor(h.score);
+    healthList.innerHTML += `
+      <div class="health-item">
+        <div class="health-item-head">
+          <span class="health-lab-name">${lab.name}</span>
+          <span class="health-score-val ${getScoreClass(h.score)}">${h.score}% <span style="font-size:10px;font-weight:400">${getScoreLabel(h.score)}</span></span>
+        </div>
+        <div class="health-bar-track">
+          <div class="health-bar-fill" style="width:${h.score}%;background:${col}"></div>
+        </div>
+        <div class="health-meta">${h.ok} Berfungsi &bull; ${h.broken} Rosak &bull; ${h.maintain} Selenggara &bull; ${h.total} jumlah</div>
+      </div>`;
+  });
+
+  // Insights
+  generateAlerts(allEquip, allLabs);
+  const insights = generateInsights(equipment, dispLabs, settings);
+  const insightsList = document.getElementById('insightsList');
+  insightsList.innerHTML = insights.map(i=>`
+    <div class="insight-item ${i.type}">
+      <i class="fas ${i.icon} insight-icon"></i>
+      <div class="insight-text"><strong>${i.title}</strong><span>${i.msg}</span></div>
+    </div>`).join('');
+
+  // Alerts panel
+  renderAlertsPanel('dashAlertList', 5);
+
+  // Charts
+  renderChartStatus(equipment);
+  renderChartCategory(allEquip, currentFilter.program, currentFilter.lab);
+  updateAlertBadge();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CHARTS
+// ═══════════════════════════════════════════════════════════
+function renderChartStatus(equipment) {
+  const ok=equipment.filter(e=>e.status==='Berfungsi').length;
+  const broken=equipment.filter(e=>e.status==='Rosak').length;
+  const maintain=equipment.filter(e=>e.status==='Selenggara').length;
+  const inactive=equipment.filter(e=>e.status==='Tidak Aktif').length;
+  const newE=equipment.filter(e=>e.status==='Baharu').length;
+
+  const ctx = document.getElementById('chartStatus');
+  if(!ctx) return;
+  if(chartStatus) chartStatus.destroy();
+  chartStatus = new Chart(ctx, {
+    type:'doughnut',
+    data:{
+      labels:['Berfungsi','Rosak','Selenggara','Tidak Aktif','Baharu'],
+      datasets:[{
+        data:[ok,broken,maintain,inactive,newE],
+        backgroundColor:['#22c55e','#ef4444','#f59e0b','#6b7280','#3b82f6'],
+        borderWidth:2, borderColor:'#0f2340',
+        hoverOffset:6
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ position:'bottom', labels:{ color:'#7da5c4', font:{size:11}, padding:10, boxWidth:10 } },
+        tooltip:{ callbacks:{ label: ctx => ` ${ctx.label}: ${ctx.raw} unit` } }
+      },
+      cutout:'60%'
+    }
+  });
+}
+
+function renderChartCategory(equipment, filterProg, filterLab) {
+  const cats = ['Elektrik','Elektronik','Telekomunikasi','PLC & Automasi','Komputer','IoT'];
+  const catFull = ['Peralatan Elektrik','Peralatan Elektronik','Peralatan Telekomunikasi','PLC dan Automasi','Komputer dan Rangkaian','IoT dan Mikropengawal'];
+  let eq = equipment;
+  if(filterProg) {
+    const labIds = load(KEYS.labs).filter(l=>l.program_id===filterProg).map(l=>l.id);
+    eq = eq.filter(e=>labIds.includes(e.lab_id));
+  }
+  if(filterLab) eq = eq.filter(e=>e.lab_id===filterLab);
+
+  const ok=[], broken=[], maintain=[];
+  catFull.forEach(c=>{
+    const catEq=eq.filter(e=>e.category===c);
+    ok.push(catEq.filter(e=>e.status==='Berfungsi').length);
+    broken.push(catEq.filter(e=>e.status==='Rosak').length);
+    maintain.push(catEq.filter(e=>e.status==='Selenggara').length);
+  });
+
+  const ctx = document.getElementById('chartCategory');
+  if(!ctx) return;
+  if(chartCategory) chartCategory.destroy();
+  chartCategory = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:cats,
+      datasets:[
+        { label:'Berfungsi', data:ok, backgroundColor:'#22c55e88', borderColor:'#22c55e', borderWidth:1 },
+        { label:'Rosak', data:broken, backgroundColor:'#ef444488', borderColor:'#ef4444', borderWidth:1 },
+        { label:'Selenggara', data:maintain, backgroundColor:'#f59e0b88', borderColor:'#f59e0b', borderWidth:1 },
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{
+        legend:{ position:'bottom', labels:{ color:'#7da5c4', font:{size:11}, padding:8, boxWidth:10 } }
+      },
+      scales:{
+        x:{ stacked:false, ticks:{ color:'#7da5c4', font:{size:10} }, grid:{ color:'#1a3a5c44' } },
+        y:{ beginAtZero:true, ticks:{ color:'#7da5c4', font:{size:10}, stepSize:1 }, grid:{ color:'#1a3a5c44' } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER EQUIPMENT TABLE
+// ═══════════════════════════════════════════════════════════
+function renderEquipmentTable() {
+  const search = document.getElementById('eqSearch')?.value.toLowerCase()||'';
+  const filterProg = document.getElementById('eqFilterProgram')?.value||'';
+  const filterLab = document.getElementById('eqFilterLab')?.value||'';
+  const filterCat = document.getElementById('eqFilterCat')?.value||'';
+  const filterStatus = document.getElementById('eqFilterStatus')?.value||'';
+  const labs = load(KEYS.labs);
+
+  let eq = load(KEYS.equipment);
+  if(filterProg) {
+    const labIds = labs.filter(l=>l.program_id===filterProg).map(l=>l.id);
+    eq = eq.filter(e=>labIds.includes(e.lab_id));
+  }
+  if(filterLab) eq = eq.filter(e=>e.lab_id===filterLab);
+  if(filterCat) eq = eq.filter(e=>e.category===filterCat);
+  if(filterStatus) eq = eq.filter(e=>e.status===filterStatus);
+  if(search) eq = eq.filter(e=>`${e.name} ${e.model} ${e.brand} ${e.asset_no} ${e.category}`.toLowerCase().includes(search));
+
+  const total = eq.length;
+  const pages = Math.ceil(total/EQ_PER_PAGE)||1;
+  if(eqPage>pages) eqPage=pages;
+  const start=(eqPage-1)*EQ_PER_PAGE, end=start+EQ_PER_PAGE;
+  const pageEq = eq.slice(start,end);
+
+  const tbody = document.getElementById('eqTbody');
+  if(!pageEq.length) {
+    tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><i class="fas fa-box-open"></i><p>Tiada rekod peralatan ditemui.</p></div></td></tr>`;
+  } else {
+    tbody.innerHTML = pageEq.map((e,i)=>`
+      <tr>
+        <td style="color:var(--text-muted)">${start+i+1}</td>
+        <td><span class="td-asset">${e.asset_no}</span></td>
+        <td><span class="td-name">${e.name}</span></td>
+        <td><span style="font-size:11px">${e.model||'-'}</span><br><span style="font-size:10px;color:var(--text-muted)">${e.brand||'-'}</span></td>
+        <td><span style="font-size:11px;color:var(--accent-blue)">${e.category}</span></td>
+        <td style="font-size:11px">${getLabName(e.lab_id)}</td>
+        <td><span class="status-badge ${getStatusClass(e.status)}">${e.status}</span></td>
+        <td style="font-size:11px">${e.next_maintenance?fmtDate(e.next_maintenance):'<span style="color:var(--text-muted)">-</span>'}</td>
+        <td>
+          <div class="td-actions">
+            <button class="btn btn-secondary btn-sm" onclick="openEquipModal('${e.id}')"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="deleteEquipment('${e.id}','${e.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  document.getElementById('eqPageInfo').textContent = `Papar ${Math.min(start+1,total)}–${Math.min(end,total)} daripada ${total} rekod`;
+  const btns = document.getElementById('eqPageBtns');
+  btns.innerHTML='';
+  for(let p=1;p<=pages;p++) {
+    const b=document.createElement('button');
+    b.className='page-btn'+(p===eqPage?' active':'');
+    b.textContent=p;
+    b.onclick=()=>{eqPage=p;renderEquipmentTable();};
+    btns.appendChild(b);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EQUIPMENT CRUD
+// ═══════════════════════════════════════════════════════════
+function openEquipModal(id=null) {
+  populateFilters();
+  document.getElementById('equipModalTitle').textContent = id ? 'Kemaskini Peralatan' : 'Tambah Peralatan Baharu';
+  document.getElementById('equipId').value = id||'';
+  if(id) {
+    const e = load(KEYS.equipment).find(x=>x.id===id);
+    if(!e) return;
+    document.getElementById('fAsset').value = e.asset_no||'';
+    document.getElementById('fName').value = e.name||'';
+    document.getElementById('fModel').value = e.model||'';
+    document.getElementById('fBrand').value = e.brand||'';
+    document.getElementById('fCategory').value = e.category||'';
+    document.getElementById('fStatus').value = e.status||'Baharu';
+    document.getElementById('fAcquired').value = e.acquired||'';
+    document.getElementById('fNextMaint').value = e.next_maintenance||'';
+    document.getElementById('fNotes').value = e.notes||'';
+    // Set program then update labs
+    const lab = load(KEYS.labs).find(l=>l.id===e.lab_id);
+    if(lab) {
+      document.getElementById('fProgram').value = lab.program_id;
+      updateFormLabs();
+      setTimeout(()=>{ document.getElementById('fLab').value = e.lab_id; },50);
+    }
+  } else {
+    ['fAsset','fName','fModel','fBrand','fNotes','fAcquired','fNextMaint'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('fCategory').value='';
+    document.getElementById('fStatus').value='Baharu';
+    document.getElementById('fProgram').value='';
+    updateFormLabs();
+  }
+  openModal('equipModal');
+}
+
+function saveEquipment() {
+  const id = document.getElementById('equipId').value;
+  const asset = document.getElementById('fAsset').value.trim();
+  const name = document.getElementById('fName').value.trim();
+  const cat = document.getElementById('fCategory').value;
+  const prog = document.getElementById('fProgram').value;
+  const labId = document.getElementById('fLab').value;
+  const status = document.getElementById('fStatus').value;
+
+  if(!asset||!name||!cat||!prog||!labId) { showToast('Sila lengkapkan semua medan yang bertanda *','error'); return; }
+
+  let all = load(KEYS.equipment);
+  if(id) {
+    const idx = all.findIndex(e=>e.id===id);
+    if(idx>-1) all[idx] = { ...all[idx],
+      asset_no:asset, name, model:document.getElementById('fModel').value.trim(),
+      brand:document.getElementById('fBrand').value.trim(), category:cat, lab_id:labId, status,
+      acquired:document.getElementById('fAcquired').value||null,
+      next_maintenance:document.getElementById('fNextMaint').value||null,
+      notes:document.getElementById('fNotes').value.trim()
+    };
+    showToast('Rekod peralatan berjaya dikemaskini.');
+  } else {
+    const dup = all.find(e=>e.asset_no===asset);
+    if(dup) { showToast('Nombor Aset sudah wujud. Sila gunakan nombor lain.','error'); return; }
+    all.push({ id:uid(), asset_no:asset, name, model:document.getElementById('fModel').value.trim(),
+      brand:document.getElementById('fBrand').value.trim(), category:cat, lab_id:labId, status,
+      acquired:document.getElementById('fAcquired').value||null,
+      next_maintenance:document.getElementById('fNextMaint').value||null,
+      notes:document.getElementById('fNotes').value.trim(), created_at:new Date().toISOString()
+    });
+    showToast('Peralatan baharu berjaya ditambah.');
+  }
+  save(KEYS.equipment, all);
+  closeModal('equipModal');
+  refreshAll();
+}
+
+function deleteEquipment(id, name) {
+  confirmAction(`Padam "${name}"?`, `Rekod peralatan ini akan dipadamkan secara kekal. Tindakan ini tidak boleh dibatalkan.`, ()=>{
+    const all = load(KEYS.equipment).filter(e=>e.id!==id);
+    save(KEYS.equipment, all);
+    refreshAll();
+    showToast('Rekod peralatan telah dipadam.');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MAINTENANCE RENDER & CRUD
+// ═══════════════════════════════════════════════════════════
+function renderMaintenance() {
+  const all = load(KEYS.equipment);
+  const maint = load(KEYS.maintenance);
+  const today = new Date();
+  const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth()-6);
+  const in7 = new Date(); in7.setDate(in7.getDate()+7);
+
+  const overdue = all.filter(e=>e.next_maintenance && new Date(e.next_maintenance)<today && e.status!=='Rosak');
+  const soon = all.filter(e=>e.next_maintenance && new Date(e.next_maintenance)>=today && new Date(e.next_maintenance)<=in7);
+
+  const overdueEl = document.getElementById('maintOverdue');
+  if(overdue.length) {
+    overdueEl.innerHTML = `<div class="maint-list">${overdue.map(e=>`
+      <div class="maint-item" style="border-color:#ef444433">
+        <div class="maint-date-box" style="border:1px solid #ef444444">
+          <div class="day" style="color:#ef4444">${new Date(e.next_maintenance).getDate()}</div>
+          <div class="mon">${new Date(e.next_maintenance).toLocaleString('ms-MY',{month:'short'})}</div>
+        </div>
+        <div class="maint-info">
+          <h4>${e.name}</h4>
+          <p>${e.asset_no} &bull; ${getLabName(e.lab_id)}</p>
+          <p style="color:#ef4444;margin-top:2px">Tertunggak sejak ${fmtDate(e.next_maintenance)}</p>
+        </div>
+      </div>`).join('')}</div>`;
+  } else { overdueEl.innerHTML='<div class="no-data"><i class="fas fa-check-circle" style="color:#22c55e"></i> Tiada penyelenggaraan tertunggak.</div>'; }
+
+  const soonEl = document.getElementById('maintSoon');
+  if(soon.length) {
+    soonEl.innerHTML = `<div class="maint-list">${soon.map(e=>`
+      <div class="maint-item">
+        <div class="maint-date-box">
+          <div class="day">${new Date(e.next_maintenance).getDate()}</div>
+          <div class="mon">${new Date(e.next_maintenance).toLocaleString('ms-MY',{month:'short'})}</div>
+        </div>
+        <div class="maint-info">
+          <h4>${e.name}</h4>
+          <p>${e.asset_no} &bull; ${getLabName(e.lab_id)}</p>
+        </div>
+      </div>`).join('')}</div>`;
+  } else { soonEl.innerHTML='<div class="no-data">Tiada penyelenggaraan dalam 7 hari akan datang.</div>'; }
+
+  // History
+  const sorted = [...maint].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const histEl = document.getElementById('maintHistory');
+  if(!sorted.length) { histEl.innerHTML='<div class="no-data">Tiada rekod penyelenggaraan.</div>'; return; }
+  histEl.innerHTML = sorted.map(m=>{
+    const eq = load(KEYS.equipment).find(e=>e.id===m.equip_id)||{};
+    return `
+    <div class="maint-item">
+      <div class="maint-date-box">
+        <div class="day">${new Date(m.date).getDate()}</div>
+        <div class="mon">${new Date(m.date).toLocaleString('ms-MY',{month:'short',year:'2-digit'})}</div>
+      </div>
+      <div class="maint-info">
+        <h4>${eq.name||'Peralatan tidak dikenal pasti'} <span style="font-size:10px;background:var(--accent-green)22;color:var(--accent-green);padding:1px 7px;border-radius:10px;margin-left:4px">${m.type}</span></h4>
+        <p>${eq.asset_no||'-'} &bull; ${getLabName(eq.lab_id||'')}</p>
+        <p style="margin-top:4px;font-size:12px;color:var(--text-primary)">${m.notes||'-'}</p>
+        ${m.technician?`<p style="font-size:10px;color:var(--text-muted);margin-top:2px">Oleh: ${m.technician}</p>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openMaintModal() {
+  const eq = load(KEYS.equipment).sort((a,b)=>a.name.localeCompare(b.name));
+  const sel = document.getElementById('mfEquip');
+  sel.innerHTML = '<option value="">-- Pilih Peralatan --</option>';
+  eq.forEach(e=>{ const o=document.createElement('option'); o.value=e.id; o.textContent=`${e.name} (${e.asset_no})`; sel.appendChild(o); });
+  document.getElementById('mfDate').value = today();
+  document.getElementById('mfType').value = 'Penyelenggaraan Berkala';
+  document.getElementById('mfNotes').value = '';
+  document.getElementById('mfStatus').value = '';
+  openModal('maintModal');
+}
+
+function saveMaintenance() {
+  const equipId = document.getElementById('mfEquip').value;
+  const date = document.getElementById('mfDate').value;
+  if(!equipId||!date) { showToast('Sila pilih peralatan dan tarikh.','error'); return; }
+  const maint = load(KEYS.maintenance);
+  maint.push({
+    id:uid(), equip_id:equipId, date,
+    type:document.getElementById('mfType').value,
+    notes:document.getElementById('mfNotes').value.trim(),
+    technician:'Penyelaras Makmal'
+  });
+  save(KEYS.maintenance, maint);
+  const newStatus = document.getElementById('mfStatus').value;
+  if(newStatus) {
+    const all = load(KEYS.equipment);
+    const idx = all.findIndex(e=>e.id===equipId);
+    if(idx>-1) { all[idx].status=newStatus; save(KEYS.equipment, all); }
+  }
+  closeModal('maintModal');
+  showToast('Rekod penyelenggaraan berjaya disimpan.');
+  refreshAll();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  REPORTS
+// ═══════════════════════════════════════════════════════════
+function renderReports() {
+  const programs = load(KEYS.programs);
+  const labs = load(KEYS.labs);
+  const all = load(KEYS.equipment);
+  const settings = loadObj(KEYS.settings);
+
+  // Program summary
+  const rpEl = document.getElementById('reportProgram');
+  rpEl.innerHTML = programs.map(p=>{
+    const pLabs = labs.filter(l=>l.program_id===p.id);
+    const pEq = all.filter(e=>pLabs.some(l=>l.id===e.lab_id));
+    if(!pEq.length) return '';
+    const ok=pEq.filter(e=>e.status==='Berfungsi').length;
+    const broken=pEq.filter(e=>e.status==='Rosak').length;
+    const maintain=pEq.filter(e=>e.status==='Selenggara').length;
+    const avgScore = pLabs.length ? Math.round(pLabs.reduce((s,l)=>s+calcLabHealth(l.id,all).score,0)/pLabs.length) : 0;
+    return `
+    <div class="maint-item" style="margin-bottom:8px">
+      <div class="maint-date-box" style="background:var(--bg-card);border:1px solid var(--border)">
+        <div class="day ${getScoreClass(avgScore)}" style="font-size:16px">${avgScore}%</div>
+        <div class="mon">Skor</div>
+      </div>
+      <div class="maint-info" style="flex:1">
+        <h4 style="font-size:12px">${p.name}</h4>
+        <p>${p.code} &bull; ${pLabs.length} makmal &bull; ${pEq.length} aset</p>
+        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+          <span class="status-badge s-ok">${ok} Berfungsi</span>
+          <span class="status-badge s-broken">${broken} Rosak</span>
+          <span class="status-badge s-maintain">${maintain} Selenggara</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Lab summary
+  const rlEl = document.getElementById('reportLab');
+  rlEl.innerHTML = labs.map(lab=>{
+    const h = calcLabHealth(lab.id, all);
+    if(!h.total) return '';
+    return `
+    <div class="health-item" style="margin-bottom:10px">
+      <div class="health-item-head">
+        <span class="health-lab-name" style="font-size:12px">${lab.name}</span>
+        <span class="health-score-val ${getScoreClass(h.score)}" style="font-size:11px">${h.score}%</span>
+      </div>
+      <div class="health-bar-track"><div class="health-bar-fill" style="width:${h.score}%;background:${getScoreColor(h.score)}"></div></div>
+      <div class="health-meta">${h.ok} OK &bull; ${h.broken} Rosak &bull; ${h.total} jumlah &bull; ${getScoreLabel(h.score)}</div>
+    </div>`;
+  }).join('');
+
+  // Full insights
+  const allInsights = generateInsights(all, labs, settings);
+  document.getElementById('fullInsights').innerHTML = allInsights.map(i=>`
+    <div class="insight-item ${i.type}">
+      <i class="fas ${i.icon} insight-icon"></i>
+      <div class="insight-text"><strong>${i.title}</strong><span>${i.msg}</span></div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ALERTS
+// ═══════════════════════════════════════════════════════════
+function renderAlertsPanel(containerId, limit=null) {
+  const alerts = load(KEYS.alerts).filter(a=>!a.dismissed);
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const show = limit ? alerts.slice(0,limit) : alerts;
+  if(!show.length) { el.innerHTML='<div class="no-data">Tiada amaran aktif.</div>'; return; }
+  el.innerHTML = show.map(a=>`
+    <div class="alert-item ${a.type}" id="alert-${a.id}">
+      <div class="alert-dot"></div>
+      <div class="alert-msg">${a.msg}</div>
+      <span class="alert-time">${new Date(a.time).toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'})}</span>
+      <button class="alert-dismiss" onclick="dismissAlert('${a.id}')"><i class="fas fa-times"></i></button>
+    </div>`).join('');
+
+  if(limit && alerts.length>limit) {
+    el.innerHTML += `<div style="text-align:center;margin-top:8px"><button class="btn btn-secondary btn-sm" onclick="showView('alerts')">Lihat semua ${alerts.length} amaran</button></div>`;
+  }
+}
+
+function renderFullAlerts() {
+  renderAlertsPanel('fullAlertList');
+}
+
+function dismissAlert(id) {
+  const alerts = load(KEYS.alerts);
+  const a = alerts.find(x=>x.id===id);
+  if(a) a.dismissed=true;
+  save(KEYS.alerts, alerts);
+  updateAlertBadge();
+  renderAlertsPanel('dashAlertList',5);
+  renderAlertsPanel('fullAlertList');
+}
+
+function dismissAllAlerts() {
+  const alerts = load(KEYS.alerts).map(a=>({...a,dismissed:true}));
+  save(KEYS.alerts, alerts);
+  updateAlertBadge();
+  renderAlertsPanel('dashAlertList',5);
+  renderAlertsPanel('fullAlertList');
+  showToast('Semua amaran telah ditutup.');
+}
+
+function updateAlertBadge() {
+  const count = load(KEYS.alerts).filter(a=>!a.dismissed).length;
+  document.getElementById('alertCount').textContent = count;
+  document.getElementById('alertCount').style.display = count ? 'inline-block' : 'none';
+  document.getElementById('alertCountBadge').textContent = count||'';
+  document.getElementById('alertCountBadge').style.display = count ? 'inline-block' : 'none';
+  document.getElementById('alertDot').style.display = count ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════════
+function renderSettings() {
+  const settings = loadObj(KEYS.settings);
+  document.getElementById('settingCritPct').value = settings.criticalPct||20;
+  document.getElementById('settingMaintMonth').value = settings.maintMonths||6;
+  const all = load(KEYS.equipment);
+  const maint = load(KEYS.maintenance);
+  const alerts = load(KEYS.alerts);
+  document.getElementById('settingStats').innerHTML=`
+    <div style="border-top:1px solid var(--border);padding-top:6px;margin-top:4px">
+      Jumlah Aset: <span style="color:var(--accent-green)">${all.length}</span><br>
+      Rekod Selenggara: <span style="color:var(--accent-green)">${maint.length}</span><br>
+      Amaran Aktif: <span style="color:var(--status-broken)">${alerts.filter(a=>!a.dismissed).length}</span>
+    </div>`;
+}
+
+function saveSettings() {
+  saveObj(KEYS.settings, {
+    criticalPct: parseInt(document.getElementById('settingCritPct').value)||20,
+    maintMonths: parseInt(document.getElementById('settingMaintMonth').value)||6
+  });
+  showToast('Tetapan berjaya disimpan.');
+  refreshAll();
+}
+
+function resetSimData() {
+  confirmAction('Jana Semula Data Simulasi?', 'Semua data sedia ada akan digantikan dengan data simulasi baharu. Tindakan ini tidak boleh dibatalkan.', ()=>{
+    buildSimData(); refreshAll(); showToast('Data simulasi berjaya dijana semula.');
+  });
+}
+
+function clearAllData() {
+  confirmAction('Padam Semua Data?', 'AMARAN: Semua data akan dipadam sepenuhnya termasuk rekod peralatan, penyelenggaraan dan amaran.', ()=>{
+    Object.values(KEYS).forEach(k=>localStorage.removeItem(k));
+    refreshAll(); showToast('Semua data telah dipadam.');
+  }, 'Padam Semua', true);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  NAVIGATION & FILTERS
+// ═══════════════════════════════════════════════════════════
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(`view-${name}`)?.classList.add('active');
+  const navMap = { dashboard:'Papan Pemuka', equipment:'Senarai Peralatan', maintenance:'Penyelenggaraan', reports:'Laporan & Analisis', alerts:'Pusat Amaran', settings:'Tetapan & Data' };
+  document.getElementById('viewTitle').textContent = navMap[name]||name;
+  // Set active nav
+  const items = document.querySelectorAll('.nav-item');
+  items.forEach(item=>{ if(item.onclick&&item.onclick.toString().includes(`'${name}'`)) item.classList.add('active'); });
+
+  const filters = document.getElementById('topbarFilters');
+  filters.style.display = name==='equipment' ? 'none' : 'flex';
+
+  closeSidebar();
+  renderView(name);
+}
+
+function renderView(name) {
+  if(name==='dashboard') renderDashboard();
+  else if(name==='equipment') { populateFilters(); renderEquipmentTable(); }
+  else if(name==='maintenance') renderMaintenance();
+  else if(name==='reports') renderReports();
+  else if(name==='alerts') renderFullAlerts();
+  else if(name==='settings') renderSettings();
+}
+
+function applyFilters() {
+  currentFilter.program = document.getElementById('filterProgram')?.value||'';
+  // Update lab dropdown
+  const labs = load(KEYS.labs);
+  const labSel = document.getElementById('filterLab');
+  if(labSel) {
+    const prev = labSel.value;
+    const filtered = currentFilter.program ? labs.filter(l=>l.program_id===currentFilter.program) : labs;
+    labSel.innerHTML='<option value="">Semua Makmal</option>';
+    filtered.forEach(l=>{ const o=document.createElement('option'); o.value=l.id; o.textContent=l.name; labSel.appendChild(o); });
+    if(filtered.some(l=>l.id===prev)) labSel.value=prev;
+  }
+  currentFilter.lab = document.getElementById('filterLab')?.value||'';
+  renderDashboard();
+}
+
+function refreshAll() {
+  const eq = load(KEYS.equipment);
+  const labs = load(KEYS.labs);
+  generateAlerts(eq, labs);
+  populateFilters();
+  const active = document.querySelector('.view.active');
+  if(active) renderView(active.id.replace('view-',''));
+  updateAlertBadge();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODAL HELPERS
+// ═══════════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id)?.classList.add('open'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+
+let _confirmCb = null;
+function confirmAction(title, msg, cb, btnLabel='Padam', danger=false) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent = msg;
+  const btn = document.getElementById('confirmOkBtn');
+  btn.textContent = btnLabel;
+  btn.className = danger ? 'btn btn-danger' : 'btn btn-danger';
+  _confirmCb = cb;
+  btn.onclick = ()=>{ closeModal('confirmModal'); if(_confirmCb) _confirmCb(); };
+  openModal('confirmModal');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════
+let _toastTimer=null;
+function showToast(msg, type='success') {
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.className='show'+(type==='error'?' error':'');
+  const icon=t.querySelector('i');
+  icon.className=type==='error'?'fas fa-exclamation-circle':'fas fa-check-circle';
+  icon.style.color=type==='error'?'var(--status-broken)':'var(--accent-green)';
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SIDEBAR TOGGLE (MOBILE)
+// ═══════════════════════════════════════════════════════════
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sideOverlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sideOverlay').classList.remove('open');
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click', e=>{ if(e.target===o) o.classList.remove('open'); });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+(function init() {
+  // Semak versi data: jika program lama (p4/DIT) masih ada, jana semula data baharu
+  const existingPrograms = load(KEYS.programs);
+  const hasOldData = existingPrograms.some(p => p.id === 'p4' || p.code === 'DIT' || p.code === 'DEP' && p.name.includes('Perindustrian'));
+  if(!load(KEYS.equipment).length || hasOldData) {
+    buildSimData();
+  }
+  populateFilters();
+  generateAlerts(load(KEYS.equipment), load(KEYS.labs));
+  updateAlertBadge();
+  renderDashboard();
+})();
+
+// ═══════════════════════════════════════════════════════════
+//  PRINT MODULE
+// ═══════════════════════════════════════════════════════════
+let _printType = 'all';
+
+function openPrintModal(type) {
+  _printType = type;
+  const titles = {
+    all:         'Laporan Keseluruhan Jabatan JKE',
+    program:     'Laporan Mengikut Program',
+    lab:         'Laporan Mengikut Makmal',
+    equipment:   'Senarai Peralatan',
+    maintenance: 'Laporan Penyelenggaraan',
+    status:      'Laporan Status Peralatan'
+  };
+  const descs = {
+    all:         'Jana laporan lengkap merangkumi semua program, makmal, peralatan dan analisis jabatan.',
+    program:     'Jana laporan ringkasan mengikut program pengajian yang dipilih.',
+    lab:         'Jana laporan terperinci mengikut makmal yang dipilih.',
+    equipment:   'Jana senarai lengkap semua peralatan beserta status terkini.',
+    maintenance: 'Jana rekod sejarah penyelenggaraan semua peralatan.',
+    status:      'Jana laporan status peralatan mengikut program atau makmal.'
+  };
+  document.getElementById('printModalTitle').textContent = titles[type];
+  document.getElementById('printDesc').textContent = descs[type];
+
+  // Populate dropdowns
+  const programs = load(KEYS.programs);
+  const labs = load(KEYS.labs);
+  const progSel = document.getElementById('printProgram');
+  progSel.innerHTML = '<option value="">Semua Program</option>';
+  programs.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=p.name; progSel.appendChild(o); });
+
+  const labSel = document.getElementById('printLab');
+  labSel.innerHTML = '<option value="">Semua Makmal</option>';
+  labs.forEach(l=>{ const o=document.createElement('option'); o.value=l.id; o.textContent=l.name; labSel.appendChild(o); });
+
+  // Show/hide filter fields
+  const wrap = document.getElementById('printFilterWrap');
+  const progGrp = document.getElementById('printProgramGroup');
+  const labGrp = document.getElementById('printLabGroup');
+  wrap.style.display = (type==='all'||type==='equipment'||type==='maintenance') ? 'none' : 'block';
+  progGrp.style.display = (type==='program'||type==='status') ? 'block' : 'none';
+  labGrp.style.display = (type==='lab'||type==='status') ? 'block' : 'none';
+
+  openModal('printModal');
+}
+
+function executePrint() {
+  closeModal('printModal');
+  const progId = document.getElementById('printProgram').value;
+  const labId  = document.getElementById('printLab').value;
+  const html = buildReportHTML(_printType, progId, labId);
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = html;
+  printArea.style.display = 'block';
+  // Sembunyikan dashboard semasa cetak
+  document.getElementById('sidebar').classList.add('no-print');
+  document.getElementById('main').classList.add('no-print');
+  setTimeout(()=>{
+    window.print();
+    printArea.style.display = 'none';
+    printArea.innerHTML = '';
+    document.getElementById('sidebar').classList.remove('no-print');
+    document.getElementById('main').classList.remove('no-print');
+  }, 300);
+}
+
+function buildReportHTML(type, progId, labId) {
+  const programs = load(KEYS.programs);
+  const labs     = load(KEYS.labs);
+  const allEq    = load(KEYS.equipment);
+  const allMaint = load(KEYS.maintenance);
+  const settings = loadObj(KEYS.settings);
+  const now      = new Date();
+  const dtStr    = now.toLocaleDateString('ms-MY',{day:'2-digit',month:'long',year:'numeric'}) +
+                   ' | ' + now.toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'});
+
+  const titles = {
+    all:         'Laporan Keseluruhan Jabatan JKE',
+    program:     'Laporan Mengikut Program',
+    lab:         'Laporan Mengikut Makmal',
+    equipment:   'Senarai Peralatan',
+    maintenance: 'Laporan Penyelenggaraan',
+    status:      'Laporan Status Peralatan'
+  };
+
+  // Tentukan skop data
+  let scopeLabel = 'Semua Program & Makmal';
+  let filteredLabs = labs;
+  let filteredEq   = allEq;
+  if(progId) {
+    const prog = programs.find(p=>p.id===progId);
+    scopeLabel = prog ? prog.name : scopeLabel;
+    filteredLabs = labs.filter(l=>l.program_id===progId);
+  }
+  if(labId) {
+    const lab = labs.find(l=>l.id===labId);
+    scopeLabel = lab ? lab.name : scopeLabel;
+    filteredLabs = labs.filter(l=>l.id===labId);
+  }
+  filteredEq = allEq.filter(e=>filteredLabs.some(l=>l.id===e.lab_id));
+
+  const kpis = {
+    total:    filteredEq.length,
+    ok:       filteredEq.filter(e=>e.status==='Berfungsi').length,
+    broken:   filteredEq.filter(e=>e.status==='Rosak').length,
+    maintain: filteredEq.filter(e=>e.status==='Selenggara').length,
+    inactive: filteredEq.filter(e=>e.status==='Tidak Aktif').length,
+    newE:     filteredEq.filter(e=>e.status==='Baharu').length
+  };
+
+  const logosPart = `
+    <div class="rpt-logos">
+      <img src="logo pkb.jpg" alt="Logo PKB" class="rpt-logo-img" onerror="this.style.display='none'">
+      <div class="rpt-title-block">
+        <div class="rpt-inst">Politeknik Kota Bharu &bull; Jabatan Kejuruteraan Elektrik</div>
+        <div class="rpt-doctitle">${titles[type]}</div>
+        <div class="rpt-scope">${scopeLabel}</div>
+      </div>
+      <img src="logo jke.png" alt="Logo JKE" class="rpt-logo-img" onerror="this.style.display='none'">
+    </div>
+    <div class="rpt-meta">
+      <span>Tarikh Cetak: <strong>${dtStr}</strong></span>
+      <span>Sistem: JKE Smart Lab Analytics v1.0</span>
+    </div>
+    <hr class="rpt-hr">`;
+
+  const kpiPart = `
+    <div class="rpt-kpi-grid">
+      <div class="rpt-kpi"><div class="rpt-kpi-val">${kpis.total}</div><div class="rpt-kpi-lbl">Jumlah Aset</div></div>
+      <div class="rpt-kpi rpt-ok"><div class="rpt-kpi-val">${kpis.ok}</div><div class="rpt-kpi-lbl">Berfungsi</div></div>
+      <div class="rpt-kpi rpt-br"><div class="rpt-kpi-val">${kpis.broken}</div><div class="rpt-kpi-lbl">Rosak</div></div>
+      <div class="rpt-kpi rpt-mn"><div class="rpt-kpi-val">${kpis.maintain}</div><div class="rpt-kpi-lbl">Selenggara</div></div>
+      <div class="rpt-kpi rpt-in"><div class="rpt-kpi-val">${kpis.inactive}</div><div class="rpt-kpi-lbl">Tidak Aktif</div></div>
+    </div>`;
+
+  let bodyPart = '';
+
+  if(type==='all' || type==='program') {
+    // Ringkasan program
+    bodyPart += '<h2 class="rpt-section-title">Ringkasan Mengikut Program</h2>';
+    bodyPart += '<table class="rpt-table"><thead><tr><th>Program</th><th>Makmal</th><th>Jumlah Aset</th><th>Berfungsi</th><th>Rosak</th><th>Selenggara</th><th>Skor</th></tr></thead><tbody>';
+    const progList = progId ? programs.filter(p=>p.id===progId) : programs;
+    progList.forEach(p=>{
+      const pLabs = labs.filter(l=>l.program_id===p.id);
+      const pEq   = allEq.filter(e=>pLabs.some(l=>l.id===e.lab_id));
+      if(!pEq.length) return;
+      const ok=pEq.filter(e=>e.status==='Berfungsi').length;
+      const br=pEq.filter(e=>e.status==='Rosak').length;
+      const mn=pEq.filter(e=>e.status==='Selenggara').length;
+      const sc=pLabs.length?Math.round(pLabs.reduce((s,l)=>s+calcLabHealth(l.id,allEq).score,0)/pLabs.length):0;
+      bodyPart += `<tr><td>${p.name}</td><td>${pLabs.length}</td><td>${pEq.length}</td><td class="td-ok">${ok}</td><td class="td-br">${br}</td><td class="td-mn">${mn}</td><td><strong>${sc}%</strong></td></tr>`;
+    });
+    bodyPart += '</tbody></table>';
+  }
+
+  if(type==='all' || type==='lab' || type==='status') {
+    // Ringkasan makmal
+    bodyPart += '<h2 class="rpt-section-title">Ringkasan Mengikut Makmal</h2>';
+    bodyPart += '<table class="rpt-table"><thead><tr><th>Makmal</th><th>Program</th><th>Jumlah Aset</th><th>Berfungsi</th><th>Rosak</th><th>Selenggara</th><th>Skor Kesihatan</th><th>Tahap</th></tr></thead><tbody>';
+    filteredLabs.forEach(lab=>{
+      const h = calcLabHealth(lab.id, allEq);
+      if(!h.total) return;
+      const prog = programs.find(p=>p.id===lab.program_id);
+      bodyPart += `<tr><td>${lab.name}</td><td>${prog?prog.code:'-'}</td><td>${h.total}</td><td class="td-ok">${h.ok}</td><td class="td-br">${h.broken}</td><td class="td-mn">${h.maintain}</td><td><strong>${h.score}%</strong></td><td>${getScoreLabel(h.score)}</td></tr>`;
+    });
+    bodyPart += '</tbody></table>';
+  }
+
+  if(type==='equipment' || type==='all') {
+    // Senarai peralatan
+    bodyPart += '<h2 class="rpt-section-title">Senarai Peralatan</h2>';
+    bodyPart += '<table class="rpt-table"><thead><tr><th>#</th><th>No. Aset</th><th>Nama Peralatan</th><th>Model</th><th>Kategori</th><th>Makmal</th><th>Status</th><th>Selenggara</th></tr></thead><tbody>';
+    filteredEq.forEach((e,i)=>{
+      const statusMap = {'Berfungsi':'td-ok','Rosak':'td-br','Selenggara':'td-mn','Tidak Aktif':'td-in','Baharu':'td-nw'};
+      bodyPart += `<tr><td>${i+1}</td><td class="td-mono">${e.asset_no}</td><td>${e.name}</td><td>${e.model||'-'}</td><td>${e.category}</td><td>${getLabName(e.lab_id)}</td><td class="${statusMap[e.status]||''}">${e.status}</td><td>${e.next_maintenance?fmtDate(e.next_maintenance):'-'}</td></tr>`;
+    });
+    bodyPart += '</tbody></table>';
+  }
+
+  if(type==='maintenance') {
+    // Sejarah penyelenggaraan
+    bodyPart += '<h2 class="rpt-section-title">Sejarah Penyelenggaraan</h2>';
+    bodyPart += '<table class="rpt-table"><thead><tr><th>#</th><th>Tarikh</th><th>Peralatan</th><th>No. Aset</th><th>Jenis</th><th>Tindakan</th><th>Oleh</th></tr></thead><tbody>';
+    const sorted = [...allMaint].sort((a,b)=>new Date(b.date)-new Date(a.date));
+    sorted.forEach((m,i)=>{
+      const eq = allEq.find(e=>e.id===m.equip_id)||{};
+      bodyPart += `<tr><td>${i+1}</td><td>${fmtDate(m.date)}</td><td>${eq.name||'-'}</td><td class="td-mono">${eq.asset_no||'-'}</td><td>${m.type}</td><td>${m.notes||'-'}</td><td>${m.technician||'-'}</td></tr>`;
+    });
+    bodyPart += '</tbody></table>';
+  }
+
+  if(type==='all') {
+    // Smart Insights
+    const insights = generateInsights(filteredEq, filteredLabs, settings);
+    bodyPart += '<h2 class="rpt-section-title">Analisis &amp; Cadangan Tindakan</h2>';
+    bodyPart += '<table class="rpt-table"><thead><tr><th>Tahap</th><th>Perkara</th><th>Cadangan</th></tr></thead><tbody>';
+    insights.forEach(ins=>{
+      const lvlMap = {critical:'🔴 Kritikal',warning:'🟠 Amaran',info:'🔵 Maklumat',good:'🟢 Baik'};
+      bodyPart += `<tr><td style="white-space:nowrap">${lvlMap[ins.type]||ins.type}</td><td><strong>${ins.title}</strong></td><td>${ins.msg}</td></tr>`;
+    });
+    bodyPart += '</tbody></table>';
+  }
+
+  const footerPart = `<div class="rpt-footer">
+    <hr class="rpt-hr">
+    <div>JKE Smart Lab Analytics &bull; Politeknik Kota Bharu &bull; Dicetak pada ${dtStr}</div>
+    <div style="margin-top:4px;font-size:9pt;color:#999">Data simulasi — untuk tujuan demonstrasi sahaja</div>
+  </div>`;
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>${titles[type]}</title>
+  <style>
+    @page { size: A4; margin: 18mm 15mm 18mm 15mm; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1a1a1a; background: #fff; }
+    .rpt-logos { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+    .rpt-logo-img { max-height:60px; max-width:120px; object-fit:contain; }
+    .rpt-title-block { flex:1; text-align:center; }
+    .rpt-inst { font-size:9pt; color:#555; }
+    .rpt-doctitle { font-size:15pt; font-weight:700; color:#0a2e1a; margin:4px 0 2px; }
+    .rpt-scope { font-size:10pt; color:#1a6b3c; font-weight:600; }
+    .rpt-meta { display:flex; justify-content:space-between; font-size:8.5pt; color:#666; margin-bottom:8px; }
+    .rpt-hr { border:none; border-top:2px solid #1a6b3c; margin:8px 0; }
+    .rpt-kpi-grid { display:flex; gap:10px; margin-bottom:14px; }
+    .rpt-kpi { flex:1; border:1px solid #ddd; border-radius:6px; padding:8px 10px; text-align:center; }
+    .rpt-kpi-val { font-size:18pt; font-weight:700; color:#1a6b3c; }
+    .rpt-kpi-lbl { font-size:8pt; color:#666; margin-top:2px; }
+    .rpt-ok .rpt-kpi-val { color:#16a34a; }
+    .rpt-br .rpt-kpi-val { color:#dc2626; }
+    .rpt-mn .rpt-kpi-val { color:#d97706; }
+    .rpt-in .rpt-kpi-val { color:#6b7280; }
+    .rpt-section-title { font-size:11pt; font-weight:700; color:#0a2e1a; border-left:4px solid #1a6b3c; padding-left:8px; margin:16px 0 8px; }
+    .rpt-table { width:100%; border-collapse:collapse; font-size:9pt; margin-bottom:14px; page-break-inside:auto; }
+    .rpt-table thead tr { background:#0a2e1a; color:#fff; }
+    .rpt-table th { padding:6px 8px; text-align:left; font-weight:600; }
+    .rpt-table td { padding:5px 8px; border-bottom:1px solid #e5e7eb; }
+    .rpt-table tbody tr:nth-child(even) { background:#f7f9f7; }
+    .rpt-table tbody tr { page-break-inside:avoid; }
+    .td-ok { color:#16a34a; font-weight:600; }
+    .td-br { color:#dc2626; font-weight:600; }
+    .td-mn { color:#d97706; font-weight:600; }
+    .td-in { color:#6b7280; }
+    .td-nw { color:#2563eb; font-weight:600; }
+    .td-mono { font-family:monospace; font-size:8.5pt; }
+    .rpt-footer { text-align:center; font-size:8.5pt; color:#888; margin-top:20px; }
+    @media print {
+      body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .rpt-table thead tr { background:#0a2e1a !important; -webkit-print-color-adjust:exact; }
+    }
+  </style></head><body>
+  ${logosPart}${kpiPart}${bodyPart}${footerPart}
+  </body></html>`;
+}
+</script>
+</body>
+</html>
